@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"log/slog"
+)
 
 func main() {
-	fmt.Print("Hello, world!")
+	slog.Info("Hello, world!")
 }
