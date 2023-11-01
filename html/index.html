@@ -1,0 +1,11 @@
+<html>
+{{if not .Pipelines}}
+    <h1>No pipelines found!</h1>
+{{else}}
+    <ul>
+    {{range .Pipelines}}
+        <li>{{.Name}}</li>
+    {{end}}
+    </ul>
+{{end}}
+</html>

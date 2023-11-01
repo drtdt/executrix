@@ -2,11 +2,20 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 )
+
+type Pipeline struct {
+	Name string
+}
+
+type IndexPageData struct {
+	Pipelines []Pipeline
+}
 
 func exists(path string) (bool, error) {
 	_, err := os.Stat(path)
@@ -47,7 +56,21 @@ func createIfNotExisting(path string) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Hello, world!")
+	// TODO this should probably go somewhere else
+	indexTemplate, err := template.ParseFiles("html/index.html")
+	if err != nil {
+		slog.Error("Failed to parse index.html", "error", err.Error())
+		os.Exit(-1)
+	}
+
+	data := IndexPageData{
+		[]Pipeline{
+			//{"Test1"},
+			//{"Test2"},
+		},
+	}
+
+	indexTemplate.Execute(w, data)
 }
 
 func main() {
@@ -72,8 +95,8 @@ func main() {
 	slog.Info("Found pipeline directory", "path", pipelineDir)
 
 	http.HandleFunc("/", handler)
-	slog.Info("Start listening", "port", PORT)
 
+	slog.Info("Start listening", "port", PORT)
 	err = http.ListenAndServe(fmt.Sprintf("localhost:%d", PORT), nil)
 	if err != nil {
 		slog.Error("Failed to start server", "error", err.Error())
