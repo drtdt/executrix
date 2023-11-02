@@ -9,12 +9,57 @@ import (
 	"path/filepath"
 )
 
+type ServerConfig struct {
+	configDir   string
+	pipelineDir string
+	pages       map[string]*template.Template
+}
+
+var serverConfig ServerConfig
+
 type Pipeline struct {
 	Name string
 }
 
 type IndexPageData struct {
 	Pipelines []Pipeline
+}
+
+var indexPageData IndexPageData
+
+func findAllFiles(path string) ([]string, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []string
+	for _, e := range entries {
+		slog.Debug("Found file", "file", e.Name())
+		result = append(result, e.Name())
+	}
+
+	return result, nil
+}
+
+func reloadPipelines() error {
+	indexPageData.Pipelines = nil
+	slog.Debug("Cleared piplines before reloading")
+
+	result, err := findAllFiles(serverConfig.pipelineDir)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range result {
+		// todo read json file
+
+		indexPageData.Pipelines = append(indexPageData.Pipelines, Pipeline{
+			Name: file,
+		})
+	}
+
+	return nil
 }
 
 func exists(path string) (bool, error) {
@@ -56,21 +101,13 @@ func createIfNotExisting(path string) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	// TODO this should probably go somewhere else
-	indexTemplate, err := template.ParseFiles("html/index.html")
-	if err != nil {
-		slog.Error("Failed to parse index.html", "error", err.Error())
-		os.Exit(-1)
+	// reload pipeline files
+	if err := reloadPipelines(); err != nil {
+		slog.Error("Error while reloading pipeline configs", "err", err.Error())
+		// todo
 	}
 
-	data := IndexPageData{
-		[]Pipeline{
-			//{"Test1"},
-			//{"Test2"},
-		},
-	}
-
-	indexTemplate.Execute(w, data)
+	serverConfig.pages["index"].Execute(w, indexPageData)
 }
 
 func main() {
@@ -93,6 +130,20 @@ func main() {
 	pipelineDir := filepath.Join(configDir, PIPELINE_DIR_NAME)
 	createIfNotExisting(pipelineDir)
 	slog.Info("Found pipeline directory", "path", pipelineDir)
+
+	serverConfig = ServerConfig{
+		configDir:   configDir,
+		pipelineDir: pipelineDir,
+		pages:       make(map[string]*template.Template),
+	}
+
+	indexTemplate, err := template.ParseFiles("html/index.html")
+	if err != nil {
+		slog.Error("Failed to parse index.html", "error", err.Error())
+		os.Exit(-1)
+	}
+
+	serverConfig.pages["index"] = indexTemplate
 
 	http.HandleFunc("/", handler)
 
