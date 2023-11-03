@@ -30,3 +30,32 @@ func FindAllFiles(path string) ([]string, error) {
 
 	return result, nil
 }
+
+func CreateIfNotExisting(path string) error {
+	pathExists, err := Exists(path)
+	if err != nil {
+		slog.Error("Failed checking for path", "path", path)
+		return err
+	}
+
+	if !pathExists {
+		slog.Info("Path not found - creating...", "path", path)
+		if err := os.Mkdir(path, 0644); err != nil {
+			slog.Error("Failed to create directory", "path", path)
+			return err
+		}
+
+		// check again
+		pathExists, err = Exists(path)
+		if err != nil {
+			slog.Error("Failed checking for path", "path", path)
+			return err
+		}
+		if !pathExists {
+			slog.Error("Directory still not found", "path", path)
+			return err
+		}
+	}
+
+	return nil
+}

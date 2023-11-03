@@ -49,33 +49,6 @@ func reloadPipelines() error {
 	return nil
 }
 
-func createIfNotExisting(path string) {
-	pathExists, err := helper.Exists(path)
-	if err != nil {
-		slog.Error("Failed checking for path", "path", path)
-		os.Exit(-1)
-	}
-
-	if !pathExists {
-		slog.Info("Path not found - creating...", "path", path)
-		if err := os.Mkdir(path, 0644); err != nil {
-			slog.Error("Failed to create directory", "path", path)
-			os.Exit(-1)
-		}
-
-		// check again
-		pathExists, err = helper.Exists(path)
-		if err != nil {
-			slog.Error("Failed checking for path", "path", path)
-			os.Exit(-1)
-		}
-		if !pathExists {
-			slog.Error("Directory still not found", "path", path)
-			os.Exit(-1)
-		}
-	}
-}
-
 func handler(w http.ResponseWriter, r *http.Request) {
 	// reload pipeline files
 	if err := reloadPipelines(); err != nil {
@@ -100,11 +73,17 @@ func main() {
 	slog.Info("Found default config location", "path", configBaseDir)
 
 	configDir := filepath.Join(configBaseDir, CONFIG_DIR_NAME)
-	createIfNotExisting(configDir)
+	if err = helper.CreateIfNotExisting(configDir); err != nil {
+		slog.Error("Error while checking for config path", "error", err.Error())
+		os.Exit(-1)
+	}
 	slog.Info("Found config directory", "path", configDir)
 
 	pipelineDir := filepath.Join(configDir, PIPELINE_DIR_NAME)
-	createIfNotExisting(pipelineDir)
+	if err = helper.CreateIfNotExisting(pipelineDir); err != nil {
+		slog.Error("Error while checking for pipeline path", "error", err.Error())
+		os.Exit(-1)
+	}
 	slog.Info("Found pipeline directory", "path", pipelineDir)
 
 	serverConfig = ServerConfig{
