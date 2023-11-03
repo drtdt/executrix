@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"executrix/helper"
 )
 
 type ServerConfig struct {
@@ -27,26 +29,11 @@ type IndexPageData struct {
 
 var indexPageData IndexPageData
 
-func findAllFiles(path string) ([]string, error) {
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var result []string
-	for _, e := range entries {
-		slog.Debug("Found file", "file", e.Name())
-		result = append(result, e.Name())
-	}
-
-	return result, nil
-}
-
 func reloadPipelines() error {
 	indexPageData.Pipelines = nil
 	slog.Debug("Cleared piplines before reloading")
 
-	result, err := findAllFiles(serverConfig.pipelineDir)
+	result, err := helper.FindAllFiles(serverConfig.pipelineDir)
 	if err != nil {
 		return err
 	}
@@ -62,19 +49,8 @@ func reloadPipelines() error {
 	return nil
 }
 
-func exists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
 func createIfNotExisting(path string) {
-	pathExists, err := exists(path)
+	pathExists, err := helper.Exists(path)
 	if err != nil {
 		slog.Error("Failed checking for path", "path", path)
 		os.Exit(-1)
@@ -88,7 +64,7 @@ func createIfNotExisting(path string) {
 		}
 
 		// check again
-		pathExists, err = exists(path)
+		pathExists, err = helper.Exists(path)
 		if err != nil {
 			slog.Error("Failed checking for path", "path", path)
 			os.Exit(-1)
