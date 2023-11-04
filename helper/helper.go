@@ -3,6 +3,7 @@ package helper
 import (
 	"log/slog"
 	"os"
+	"path/filepath"
 )
 
 func Exists(path string) (bool, error) {
@@ -25,7 +26,7 @@ func FindAllFiles(path string) ([]string, error) {
 	var result []string
 	for _, e := range entries {
 		slog.Debug("Found file", "file", e.Name())
-		result = append(result, e.Name())
+		result = append(result, filepath.Join(path, e.Name()))
 	}
 
 	return result, nil

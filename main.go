@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"executrix/data"
 	"executrix/helper"
 )
 
@@ -19,12 +20,8 @@ type ServerConfig struct {
 
 var serverConfig ServerConfig
 
-type Pipeline struct {
-	Name string
-}
-
 type IndexPageData struct {
-	Pipelines []Pipeline
+	Pipelines []data.Pipeline
 }
 
 var indexPageData IndexPageData
@@ -39,17 +36,22 @@ func reloadPipelines() error {
 	}
 
 	for _, file := range result {
-		// todo read json file
+		pipeline, err := data.FromJson(file)
+		if err != nil {
+			slog.Error("Error reading pipline configuration", "file", file, "error", err)
+			// todo - put info to html?
+			continue
+		}
 
-		indexPageData.Pipelines = append(indexPageData.Pipelines, Pipeline{
-			Name: file,
-		})
+		indexPageData.Pipelines = append(indexPageData.Pipelines, pipeline)
 	}
 
 	return nil
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Request to index page")
+	slog.Debug("Request to index page", "request", *r)
 	// reload pipeline files
 	if err := reloadPipelines(); err != nil {
 		slog.Error("Error while reloading pipeline configs", "err", err.Error())
