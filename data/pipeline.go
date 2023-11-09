@@ -2,34 +2,56 @@ package data
 
 import (
 	"encoding/json"
-	"io"
+	"errors"
+	"executrix/helper"
 	"log/slog"
-	"os"
 )
 
+type Step interface {
+	ShowAs() string
+}
+
+type PSStep struct {
+	Name       string
+	ScriptPath string
+}
+
 type Pipeline struct {
-	Name string
+	Name        string
+	Description string
+	Steps       []Step
+}
+
+func (s PSStep) ShowAs() string {
+	return s.Name
 }
 
 func FromJson(path string) (Pipeline, error) {
-	jsonFile, err := os.Open(path)
+	bytes, err := helper.ReadFile(path)
 	if err != nil {
 		return Pipeline{}, err
 	}
 
-	slog.Debug("Successfully opened", "file", path)
-
-	defer jsonFile.Close()
-
-	byteValue, err := io.ReadAll(jsonFile)
+	var p map[string]interface{}
+	err = json.Unmarshal(bytes, &p)
 	if err != nil {
 		return Pipeline{}, err
 	}
+
+	slog.Info("Successfully read", "pipeline", p)
 
 	var pipeline Pipeline
-	err = json.Unmarshal(byteValue, &pipeline)
-	if err != nil {
-		return Pipeline{}, err
+
+	if val, ok := p["Name"].(string); !ok {
+		return Pipeline{}, errors.New("could not find pipeline name")
+	} else {
+		pipeline.Name = val
+	}
+
+	if val, ok := p["Description"].(string); !ok {
+		return Pipeline{}, errors.New("could not find pipeline description")
+	} else {
+		pipeline.Description = val
 	}
 
 	return pipeline, nil

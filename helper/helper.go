@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -59,4 +60,22 @@ func CreateIfNotExisting(path string) error {
 	}
 
 	return nil
+}
+
+func ReadFile(path string) ([]byte, error) {
+	jsonFile, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	defer jsonFile.Close()
+
+	slog.Debug("Successfully opened", "file", path)
+
+	bytes, err := io.ReadAll(jsonFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes, nil
 }
