@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"executrix/data"
 	"executrix/helper"
@@ -49,7 +51,7 @@ func reloadPipelines() error {
 	return nil
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func indexHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Request to index page")
 	slog.Debug("Request to index page", "request", *r)
 	// reload pipeline files
@@ -59,6 +61,21 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	serverConfig.pages["index"].Execute(w, indexPageData)
+}
+
+func pipelineHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Request pipeline page")
+
+	id := strings.TrimPrefix(r.URL.Path, "/pipeline/")
+	slog.Info("Found Pipeline ID", "id", id)
+
+	idx := slices.IndexFunc(indexPageData.Pipelines, func(p data.Pipeline) bool { return p.Name == id })
+	if idx < 0 {
+		slog.Error("Could not find pipeline", "name", id)
+		// todo
+	}
+
+	serverConfig.pages["pipeline"].Execute(w, indexPageData.Pipelines[idx])
 }
 
 func main() {
@@ -100,9 +117,17 @@ func main() {
 		os.Exit(-1)
 	}
 
-	serverConfig.pages["index"] = indexTemplate
+	pipelineTemplate, err := template.ParseFiles("html/pipeline.html")
+	if err != nil {
+		slog.Error("Failed to parse pipeline.html", "error", err.Error())
+		os.Exit(-1)
+	}
 
-	http.HandleFunc("/", handler)
+	serverConfig.pages["index"] = indexTemplate
+	serverConfig.pages["pipeline"] = pipelineTemplate
+
+	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/pipeline/", pipelineHandler)
 
 	slog.Info("Start listening", "port", PORT)
 	err = http.ListenAndServe(fmt.Sprintf("localhost:%d", PORT), nil)

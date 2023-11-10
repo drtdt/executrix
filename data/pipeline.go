@@ -38,7 +38,7 @@ func FromJson(path string) (Pipeline, error) {
 		return Pipeline{}, err
 	}
 
-	slog.Info("Successfully read", "pipeline", p)
+	slog.Debug("Successfully unmarshalled file content", "content", p)
 
 	var pipeline Pipeline
 
