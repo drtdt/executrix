@@ -1,11 +1,40 @@
 <html>
+<head>
+    <style>
+        table {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+        }
+        
+        td, th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+        }
+        
+        tr:nth-child(even) {
+        background-color: #dddddd;
+        }
+    </style>
+</head>
+<body>
 {{if not .Pipelines}}
     <h1>No pipelines found!</h1>
 {{else}}
-    <ul>
+    <h1>Pipelines</h1>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+        </tr>
     {{range .Pipelines}}
-        <li>{{.Name}}</li>
+        <tr>
+            <td>{{.Name}}</td>
+            <td>{{.Description}}</td>
+        </tr>
     {{end}}
-    </ul>
+    </table>
 {{end}}
+</body>
 </html>
