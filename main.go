@@ -69,13 +69,12 @@ func pipelineHandler(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/pipeline/")
 	slog.Info("Found Pipeline ID", "id", id)
 
-	idx := slices.IndexFunc(indexPageData.Pipelines, func(p data.Pipeline) bool { return p.Name == id })
-	if idx < 0 {
+	if idx := slices.IndexFunc(indexPageData.Pipelines, func(p data.Pipeline) bool { return p.Name == id }); idx < 0 {
 		slog.Error("Could not find pipeline", "name", id)
 		// todo
+	} else {
+		serverConfig.pages["pipeline"].Execute(w, indexPageData.Pipelines[idx])
 	}
-
-	serverConfig.pages["pipeline"].Execute(w, indexPageData.Pipelines[idx])
 }
 
 func main() {

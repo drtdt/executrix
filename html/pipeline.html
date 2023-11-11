@@ -2,5 +2,10 @@
 <html>
 <body>
     <h1>Pipeline {{.Name}}</h1>
+    <ul>
+        {{range .Steps}}
+        <li>{{.Name}}</li>
+        {{end}}
+    </ul>
 </body>
 </html>
