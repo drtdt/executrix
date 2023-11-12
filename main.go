@@ -65,6 +65,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 func pipelineHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Request pipeline page")
+	slog.Info("Request pipeline page", "request", *r)
 
 	id := strings.TrimPrefix(r.URL.Path, "/pipeline/")
 	slog.Info("Found Pipeline ID", "id", id)

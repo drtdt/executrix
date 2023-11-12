@@ -1,11 +1,45 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <style>
+        table {
+            font-family: arial, sans-serif;
+            border-collapse: separate;
+            width: 100%;
+        }
+        td, th {
+            text-align: left;
+            padding: 8px;
+        }
+        tr {
+            background-color: #dddddd;
+        }
+
+        td.min, th.min {
+            width: 1%;
+            white-space: nowrap;
+            text-align: center;
+        }
+    </style>
+</head>
 <body>
     <h1>Pipeline {{.Name}}</h1>
-    <ul>
-        {{range .Steps}}
-        <li>{{.Name}}</li>
-        {{end}}
-    </ul>
+    <form action="" method="POST">
+        <input type="submit" value="RUN" id="run">
+        <table>
+            <tr>
+                <th class="min">Active</th>
+                <th class="min">Single</th>
+                <th>Step</th>
+            <tr>
+            {{range .Steps}}
+            <tr>
+                <td class="min"><input type="checkbox" id="{{.Name}}" name="{{.Name}}"></td>
+                <td class="min"><input type="checkbox" id="{{.Name}}" name="{{.Name}}"></td>
+                <td>{{.Name}}</td>
+            <tr>
+            {{end}}
+        </table>
+    </form>
 </body>
 </html>

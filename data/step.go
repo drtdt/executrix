@@ -8,6 +8,8 @@ import (
 type PSStep struct {
 	Name       string
 	ScriptPath string
+	//Args       string
+	//DependsOn  []string
 }
 
 type Step interface {
@@ -20,11 +22,19 @@ func (s PSStep) ShowAs() string {
 
 func readPSType(s map[string]interface{}) (PSStep, error) {
 	step := PSStep{}
+
 	if val, ok := s["Name"].(string); !ok {
 		return PSStep{}, errors.New("could not find step name")
 	} else {
 		slog.Info("Read step name", "s", val)
 		step.Name = val
+	}
+
+	if val, ok := s["ScriptPath"].(string); !ok {
+		return PSStep{}, errors.New("could not find script path")
+	} else {
+		slog.Info("Read script path", "path", val)
+		step.ScriptPath = val
 	}
 
 	return step, nil
