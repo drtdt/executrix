@@ -24,8 +24,9 @@
 </head>
 <body>
     <h1>Pipeline {{.Name}}</h1>
+    <p><a href="/">Back</a></p>
     <form action="" method="POST">
-        <input type="submit" value="RUN" id="run">
+        <input type="submit" value="RUN" id="run" disabled>
         <table>
             <tr>
                 <th class="min">Active</th>
@@ -34,12 +35,33 @@
             <tr>
             {{range .Steps}}
             <tr>
-                <td class="min"><input type="checkbox" id="{{.Name}}" name="{{.Name}}"></td>
-                <td class="min"><input type="checkbox" id="{{.Name}}" name="{{.Name}}"></td>
+                <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()"></td>
+                <td class="min"><input type="checkbox" id="single_{{.Name}}" name="single_{{.Name}}" onclick="update()"></td>
                 <td>{{.Name}}</td>
             <tr>
             {{end}}
         </table>
     </form>
+
+    <script>
+        function anyActive() {
+            const checkboxes = document.querySelectorAll("[id^=active]")
+            let found = false
+            checkboxes.forEach(box => {
+                if (box.checked) {
+                    found = true
+                }
+            });
+
+            return found
+        }
+
+        function update() {
+            console.log("updating states")
+            document.getElementById("run").disabled = !anyActive()
+        }
+
+        update();
+    </script>
 </body>
 </html>
