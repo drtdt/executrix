@@ -10,9 +10,9 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"executrix/data"
+	"executrix/executrix"
 	"executrix/helper"
 )
 
@@ -87,19 +87,9 @@ func pipelineHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func executePipeline(p *data.Pipeline) {
-	slog.Info("Starting pipeline")
-
-	// dummy implementation
-	time.Sleep(10000 * time.Millisecond)
-
-	p.IsRunning = false
-	slog.Info("Pipeline finished")
-}
-
 func triggerHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Request to trigger endpoint")
-	slog.Debug("Request to trigger endpoint", "request", *r)
+	slog.Info("Request to trigger endpoint", "request", *r)
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -113,7 +103,7 @@ func triggerHandler(w http.ResponseWriter, r *http.Request) {
 
 	indexPageData.Pipelines[idx].IsRunning = true
 
-	go executePipeline(&indexPageData.Pipelines[idx])
+	go executrix.ExecutePipeline(&indexPageData.Pipelines[idx])
 
 	fmt.Fprint(w, `{"started": true}`)
 }
@@ -132,7 +122,9 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, `{"running": `+strconv.FormatBool(indexPageData.Pipelines[idx].IsRunning)+`}`)
+	fmt.Fprint(w, `{
+			"running": `+strconv.FormatBool(indexPageData.Pipelines[idx].IsRunning)+
+		`}`)
 }
 
 func main() {

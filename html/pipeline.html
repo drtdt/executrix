@@ -71,6 +71,7 @@
                         if (data.started) {
                             console.log("Pipeline started")
                             document.getElementById("run").disabled = true
+                            checkStatus()
                         } else {
                             console.log("Started pipeline failed!")
                         }
@@ -78,7 +79,6 @@
             }
 
             start()
-            checkStatus()
         }
 
         function anyActive() {
