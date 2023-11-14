@@ -8,7 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
+	"time"
 
 	"executrix/data"
 	"executrix/helper"
@@ -24,6 +26,10 @@ var serverConfig ServerConfig
 
 type IndexPageData struct {
 	Pipelines []data.Pipeline
+}
+
+func (d IndexPageData) IndexFromName(name string) int {
+	return slices.IndexFunc(d.Pipelines, func(p data.Pipeline) bool { return p.Name == name })
 }
 
 var indexPageData IndexPageData
@@ -54,6 +60,11 @@ func reloadPipelines() error {
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Request to index page")
 	slog.Debug("Request to index page", "request", *r)
+
+	// todo check there's nothing after '/'
+
+	// todo no reload if pipelines are running!
+
 	// reload pipeline files
 	if err := reloadPipelines(); err != nil {
 		slog.Error("Error while reloading pipeline configs", "err", err.Error())
@@ -65,17 +76,63 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 func pipelineHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Request pipeline page")
-	slog.Info("Request pipeline page", "request", *r)
+	slog.Debug("Request pipeline page", "request", *r)
 
 	id := strings.TrimPrefix(r.URL.Path, "/pipeline/")
-	slog.Info("Found Pipeline ID", "id", id)
-
-	if idx := slices.IndexFunc(indexPageData.Pipelines, func(p data.Pipeline) bool { return p.Name == id }); idx < 0 {
+	if idx := indexPageData.IndexFromName(id); idx < 0 {
 		slog.Error("Could not find pipeline", "name", id)
 		// todo
 	} else {
 		serverConfig.pages["pipeline"].Execute(w, indexPageData.Pipelines[idx])
 	}
+}
+
+func executePipeline(p *data.Pipeline) {
+	slog.Info("Starting pipeline")
+
+	// dummy implementation
+	time.Sleep(10000 * time.Millisecond)
+
+	p.IsRunning = false
+	slog.Info("Pipeline finished")
+}
+
+func triggerHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Request to trigger endpoint")
+	slog.Debug("Request to trigger endpoint", "request", *r)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	id := strings.TrimPrefix(r.URL.Path, "/trigger/")
+	idx := indexPageData.IndexFromName(id)
+	if idx < 0 {
+		slog.Error("Could not find pipeline", "name", id)
+		fmt.Fprint(w, `{"started": false}`)
+		return
+	}
+
+	indexPageData.Pipelines[idx].IsRunning = true
+
+	go executePipeline(&indexPageData.Pipelines[idx])
+
+	fmt.Fprint(w, `{"started": true}`)
+}
+
+func statusHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Request to status endpoint")
+	slog.Debug("Request to status endpoint", "request", *r)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	id := strings.TrimPrefix(r.URL.Path, "/status/")
+	idx := indexPageData.IndexFromName(id)
+	if idx < 0 {
+		slog.Error("Could not find pipeline", "name", id)
+		fmt.Fprint(w, `{"running": false}`) // todo error handling
+		return
+	}
+
+	fmt.Fprint(w, `{"running": `+strconv.FormatBool(indexPageData.Pipelines[idx].IsRunning)+`}`)
 }
 
 func main() {
@@ -128,6 +185,8 @@ func main() {
 
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/pipeline/", pipelineHandler)
+	http.HandleFunc("/trigger/", triggerHandler)
+	http.HandleFunc("/status/", statusHandler)
 
 	slog.Info("Start listening", "port", PORT)
 	err = http.ListenAndServe(fmt.Sprintf("localhost:%d", PORT), nil)

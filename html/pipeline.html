@@ -25,25 +25,62 @@
 <body>
     <h1>Pipeline {{.Name}}</h1>
     <p><a href="/">Back</a></p>
-    <form action="" method="POST">
-        <input type="submit" value="RUN" id="run" disabled>
-        <table>
-            <tr>
-                <th class="min">Active</th>
-                <th class="min">Single</th>
-                <th>Step</th>
-            <tr>
-            {{range .Steps}}
-            <tr>
-                <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()"></td>
-                <td class="min"><input type="checkbox" id="single_{{.Name}}" name="single_{{.Name}}" onclick="update()"></td>
-                <td>{{.Name}}</td>
-            <tr>
-            {{end}}
-        </table>
-    </form>
+    <input type="submit" value="RUN" id="run" onclick="run()">
+    <table>
+        <tr>
+            <th class="min">Active</th>
+            <th class="min">Single</th>
+            <th>Step</th>
+        <tr>
+        {{range .Steps}}
+        <tr>
+            <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()"></td>
+            <td class="min"><input type="checkbox" id="single_{{.Name}}" name="single_{{.Name}}" onclick="update()"></td>
+            <td>{{.Name}}</td>
+        <tr>
+        {{end}}
+    </table>
 
     <script>
+        function checkStatus() {
+            console.log("checking...")
+            const url = "/status/{{.Name}}"
+            const check = () => {
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data)
+                        if (data.running) {
+                            setTimeout(checkStatus, 2500)
+                        } else {
+                            document.getElementById("run").disabled = !anyActive()
+                        }
+                    })
+            }
+
+            check()
+        }
+
+        function run() {
+            console.log("running...")
+            const url = "/trigger/{{.Name}}"
+            const start = () => {
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.started) {
+                            console.log("Pipeline started")
+                            document.getElementById("run").disabled = true
+                        } else {
+                            console.log("Started pipeline failed!")
+                        }
+                    })
+            }
+
+            start()
+            checkStatus()
+        }
+
         function anyActive() {
             const checkboxes = document.querySelectorAll("[id^=active]")
             let found = false
