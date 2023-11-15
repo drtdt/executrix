@@ -35,7 +35,7 @@
         {{range .Steps}}
         <tr>
             <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()"></td>
-            <td class="min"><input type="checkbox" id="single_{{.Name}}" name="single_{{.Name}}" onclick="update()"></td>
+            <td class="min"><input type="checkbox" id="single_{{.Name}}" name="single_{{.Name}}" onclick="update()" disabled></td>
             <td>{{.Name}}</td>
         <tr>
         {{end}}
@@ -63,19 +63,33 @@
 
         function run() {
             console.log("running...")
+
             const url = "/trigger/{{.Name}}"
+            const checkboxes = document.querySelectorAll("[id^=active]")
+            const body = Array.from(checkboxes).map(elem => ({
+                    StepName: elem.id.replace('active_', ''),
+                    Checked: elem.checked
+                }))
+
             const start = () => {
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.started) {
-                            console.log("Pipeline started")
-                            document.getElementById("run").disabled = true
-                            checkStatus()
-                        } else {
-                            console.log("Started pipeline failed!")
-                        }
-                    })
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.started) {
+                        console.log("Pipeline started")
+                        document.getElementById("run").disabled = true
+                        checkStatus()
+                    } else {
+                        console.log("Started pipeline failed!")
+                    }
+                })
             }
 
             start()

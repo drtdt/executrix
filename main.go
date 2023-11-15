@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -89,7 +91,7 @@ func pipelineHandler(w http.ResponseWriter, r *http.Request) {
 
 func triggerHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Request to trigger endpoint")
-	slog.Info("Request to trigger endpoint", "request", *r)
+	slog.Debug("Request to trigger endpoint", "request", *r)
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -97,13 +99,31 @@ func triggerHandler(w http.ResponseWriter, r *http.Request) {
 	idx := indexPageData.IndexFromName(id)
 	if idx < 0 {
 		slog.Error("Could not find pipeline", "name", id)
-		fmt.Fprint(w, `{"started": false}`)
+		fmt.Fprint(w, `{"started": false}`) // todo give reason
 		return
 	}
 
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		slog.Error("Could not read body from request", "err", err.Error())
+		fmt.Fprint(w, `{"started": false}`) // todo give reason
+		return
+	}
+
+	slog.Debug("recieved body", "body", body)
+
+	var stepInfo []data.StepInfo
+	if err = json.Unmarshal(body, &stepInfo); err != nil {
+		slog.Error("Could not unmarshall body from request", "err", err.Error())
+		fmt.Fprint(w, `{"started": false}`) // todo give reason
+		return
+	}
+
+	slog.Debug("parsed body", "body", stepInfo)
+
 	indexPageData.Pipelines[idx].IsRunning = true
 
-	go executrix.ExecutePipeline(&indexPageData.Pipelines[idx])
+	go executrix.ExecutePipeline(&indexPageData.Pipelines[idx], stepInfo)
 
 	fmt.Fprint(w, `{"started": true}`)
 }
