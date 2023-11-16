@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"slices"
 
 	"executrix/helper"
 )
@@ -11,8 +12,34 @@ import (
 type Pipeline struct {
 	Name        string
 	Description string
-	Steps       []Step
+	Steps       []IStep
 	IsRunning   bool
+}
+
+type StepName struct {
+	Name string
+}
+
+func (p Pipeline) FindStep(name string) IStep {
+	if idx := slices.IndexFunc(p.Steps, func(s IStep) bool { return s.ShowAs() == name }); idx < 0 {
+		return nil
+	} else {
+		return p.Steps[idx]
+	}
+}
+
+func (p Pipeline) GetRunningSteps() []StepName {
+	var list []StepName
+
+	for _, s := range p.Steps {
+		if s.IsRunning() {
+			list = append(list, StepName{
+				Name: s.ShowAs(),
+			})
+		}
+	}
+
+	return list
 }
 
 func FromJson(path string) (Pipeline, error) {

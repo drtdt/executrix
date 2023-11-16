@@ -5,46 +5,58 @@ import (
 	"log/slog"
 )
 
+type IStep interface {
+	ShowAs() string
+	IsRunning() bool
+	SetRunning(b bool)
+}
+
 type PSStep struct {
 	Name       string
-	ScriptPath string
+	scriptPath string
+	isRunning  bool
 	//Args       string
 	//DependsOn  []string
 }
 
-type Step interface {
-	ShowAs() string
-}
-
-func (s PSStep) ShowAs() string {
+func (s *PSStep) ShowAs() string {
 	return s.Name
 }
 
-func readPSType(s map[string]interface{}) (PSStep, error) {
+func (s *PSStep) IsRunning() bool {
+	return s.isRunning
+}
+
+func (s *PSStep) SetRunning(b bool) {
+	s.isRunning = b
+}
+
+func readPSType(s map[string]interface{}) (*PSStep, error) {
 	step := PSStep{}
 
 	if val, ok := s["Name"].(string); !ok {
-		return PSStep{}, errors.New("could not find step name")
+		return nil, errors.New("could not find step name")
 	} else {
 		slog.Info("Read step name", "s", val)
 		step.Name = val
 	}
 
 	if val, ok := s["ScriptPath"].(string); !ok {
-		return PSStep{}, errors.New("could not find script path")
+		return nil, errors.New("could not find script path")
 	} else {
 		slog.Info("Read script path", "path", val)
-		step.ScriptPath = val
+		step.scriptPath = val
 	}
 
-	return step, nil
+	return &step, nil
 }
 
-func FromJSON(s map[string]interface{}) (Step, error) {
+func FromJSON(s map[string]interface{}) (IStep, error) {
 	val, ok := s["Type"].(string)
 	if !ok {
 		return nil, errors.New("could not find step type")
 	}
+
 	slog.Info("Read step type", "type", val)
 	switch val {
 	case "PS":

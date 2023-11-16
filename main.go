@@ -142,9 +142,17 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, `{
-			"running": `+strconv.FormatBool(indexPageData.Pipelines[idx].IsRunning)+
-		`}`)
+	bytes, err := json.Marshal(indexPageData.Pipelines[idx].GetRunningSteps())
+	if err != nil {
+		slog.Error("Could not create status data")
+		fmt.Fprint(w, `{"running": false}`) // todo error handling
+		return
+	}
+
+	fmt.Fprint(w, "{"+
+		`"running": `+strconv.FormatBool(indexPageData.Pipelines[idx].IsRunning)+", "+
+		`"currentSteps": `+string(bytes)+
+		"}")
 }
 
 func main() {
