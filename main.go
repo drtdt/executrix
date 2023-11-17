@@ -142,7 +142,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bytes, err := json.Marshal(indexPageData.Pipelines[idx].GetRunningSteps())
+	bytes, err := json.Marshal(indexPageData.Pipelines[idx].GetStepStates())
 	if err != nil {
 		slog.Error("Could not create status data")
 		fmt.Fprint(w, `{"running": false}`) // todo error handling
@@ -151,7 +151,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprint(w, "{"+
 		`"running": `+strconv.FormatBool(indexPageData.Pipelines[idx].IsRunning)+", "+
-		`"currentSteps": `+string(bytes)+
+		`"stepStates": `+string(bytes)+
 		"}")
 }
 

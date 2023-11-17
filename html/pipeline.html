@@ -20,6 +20,27 @@
             white-space: nowrap;
             text-align: center;
         }
+
+        td.waiting {
+            background-color: #dddddd;
+        }
+
+        td.running {
+            background-color: royalblue;
+        }
+
+        td.failed {
+            background-color: red;
+        }
+
+        td.success {
+            background-color: limegreen;
+        }
+
+        td.semi {
+            background-color: yellow;
+        }
+
     </style>
 </head>
 <body>
@@ -36,20 +57,34 @@
         <tr>
             <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()"></td>
             <td class="min"><input type="checkbox" id="single_{{.Name}}" name="single_{{.Name}}" onclick="update()" disabled></td>
-            <td>{{.Name}}</td>
+            <td class="" id="name_{{.Name}}">{{.Name}}</td>
         <tr>
         {{end}}
     </table>
 
     <script>
+        function convertStateId(id) {
+            switch(id) {
+                case 0: return "waiting"
+                case 1: return "running"
+                case 2: return "failed"
+                case 3: return "success"
+                case 4: return "semi"
+            }
+        }
+
         function checkStatus() {
             console.log("checking...")
+
             const url = "/status/{{.Name}}"
             const check = () => {
                 fetch(url)
                     .then(response => response.json())
                     .then(data => {
-                        console.log(data)
+                        data.stepStates.forEach(state => {
+                            document.getElementById("name_" + state.Step).classList = convertStateId(state.State)
+                        })
+
                         if (data.running) {
                             setTimeout(checkStatus, 2500)
                         } else {
@@ -63,6 +98,8 @@
 
         function run() {
             console.log("running...")
+
+            // todo clear steps?
 
             const url = "/trigger/{{.Name}}"
             const checkboxes = document.querySelectorAll("[id^=active]")

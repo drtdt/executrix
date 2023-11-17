@@ -5,16 +5,26 @@ import (
 	"log/slog"
 )
 
+type State int
+
+const (
+	Waiting State = iota
+	Running
+	Failed
+	Success
+	Semi
+)
+
 type IStep interface {
 	ShowAs() string
-	IsRunning() bool
-	SetRunning(b bool)
+	GetState() State
+	SetState(b State)
 }
 
 type PSStep struct {
 	Name       string
 	scriptPath string
-	isRunning  bool
+	state      State
 	//Args       string
 	//DependsOn  []string
 }
@@ -23,12 +33,12 @@ func (s *PSStep) ShowAs() string {
 	return s.Name
 }
 
-func (s *PSStep) IsRunning() bool {
-	return s.isRunning
+func (s *PSStep) GetState() State {
+	return s.state
 }
 
-func (s *PSStep) SetRunning(b bool) {
-	s.isRunning = b
+func (s *PSStep) SetState(state State) {
+	s.state = state
 }
 
 func readPSType(s map[string]interface{}) (*PSStep, error) {
@@ -47,6 +57,8 @@ func readPSType(s map[string]interface{}) (*PSStep, error) {
 		slog.Info("Read script path", "path", val)
 		step.scriptPath = val
 	}
+
+	step.state = Waiting
 
 	return &step, nil
 }

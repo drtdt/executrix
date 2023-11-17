@@ -16,8 +16,9 @@ type Pipeline struct {
 	IsRunning   bool
 }
 
-type StepName struct {
-	Name string
+type StateInfo struct {
+	Step  string
+	State State
 }
 
 func (p Pipeline) FindStep(name string) IStep {
@@ -28,15 +29,13 @@ func (p Pipeline) FindStep(name string) IStep {
 	}
 }
 
-func (p Pipeline) GetRunningSteps() []StepName {
-	var list []StepName
-
+func (p Pipeline) GetStepStates() []StateInfo {
+	var list []StateInfo
 	for _, s := range p.Steps {
-		if s.IsRunning() {
-			list = append(list, StepName{
-				Name: s.ShowAs(),
-			})
-		}
+		list = append(list, StateInfo{
+			Step:  s.ShowAs(),
+			State: s.GetState(),
+		})
 	}
 
 	return list

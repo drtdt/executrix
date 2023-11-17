@@ -18,12 +18,12 @@ func ExecutePipeline(p *data.Pipeline, stepInfo []data.StepInfo) {
 			}
 
 			slog.Info("Excuting step", "step", step.StepName)
-			pStep.SetRunning(true)
+			pStep.SetState(data.Running)
 
 			// dummy implementation
 			time.Sleep(10000 * time.Millisecond)
 
-			pStep.SetRunning(false)
+			pStep.SetState(data.Success)
 		} else {
 			slog.Info("Skipping unchecked step", "step", step.StepName)
 		}
