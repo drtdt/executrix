@@ -47,6 +47,8 @@
     <h1>Pipeline {{.Name}}</h1>
     <p><a href="/">Back</a></p>
     <input type="submit" value="RUN" id="run" onclick="run()">
+    <input type="submit" value="STOP" id="stop" onclick="kill()">
+    <input type="submit" value="NEW" id="new" onclick="reset()">
     <table>
         <tr>
             <th class="min">Active</th>
@@ -88,7 +90,9 @@
                         if (data.running) {
                             setTimeout(checkStatus, 2500)
                         } else {
-                            document.getElementById("run").disabled = !anyActive()
+                            document.getElementById("run").disabled = true
+                            document.getElementById("stop").disabled = true
+                            document.getElementById("new").disabled = false
                         }
                     })
             }
@@ -96,10 +100,11 @@
             check()
         }
 
+        function kill() {} // todo
+        function reset() {} // todo
+
         function run() {
             console.log("running...")
-
-            // todo clear steps?
 
             const url = "/trigger/{{.Name}}"
             const checkboxes = document.querySelectorAll("[id^=active]")
@@ -121,7 +126,12 @@
                 .then(data => {
                     if (data.started) {
                         console.log("Pipeline started")
+
                         document.getElementById("run").disabled = true
+                        document.getElementById("stop").disabled = false
+                        document.getElementById("new").disabled = true
+                        disableAllCheckboxes()
+
                         checkStatus()
                     } else {
                         console.log("Started pipeline failed!")
@@ -133,20 +143,27 @@
         }
 
         function anyActive() {
-            const checkboxes = document.querySelectorAll("[id^=active]")
             let found = false
-            checkboxes.forEach(box => {
+            document.querySelectorAll("[id^=active]").forEach(box => {
                 if (box.checked) {
                     found = true
+                    return
                 }
             });
 
             return found
         }
 
+        function disableAllCheckboxes() {
+            document.querySelectorAll("[id^=active]").forEach(box => { box.disabled = true });
+            document.querySelectorAll("[id^=single]").forEach(box => { box.disabled = true });
+        }
+
         function update() {
             console.log("updating states")
             document.getElementById("run").disabled = !anyActive()
+            document.getElementById("stop").disabled = true
+            document.getElementById("new").disabled = true
         }
 
         update();
