@@ -1,9 +1,11 @@
 package executrix
 
 import (
+	"bufio"
 	"executrix/data"
 	"log/slog"
 	"os/exec"
+	"sync"
 )
 
 func ExecutePipeline(p *data.Pipeline, stepInfo []data.StepInfo) {
@@ -31,7 +33,6 @@ func ExecutePipeline(p *data.Pipeline, stepInfo []data.StepInfo) {
 			pStep.SetState(data.Failed)
 			continue
 		}
-
 	}
 
 	p.IsRunning = false
@@ -43,23 +44,48 @@ func execPS(step *data.PSStep) data.State {
 
 	cmd := exec.Command("Powershell", "-nologo", "-noprofile", "-noninteractive", step.ScriptPath)
 
-	_, err := cmd.StdoutPipe() // todo
+	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		slog.Error("Error getting stdout pipe in PS step", "error", err)
 		return data.Failed
 	}
+
+	errPipe, err := cmd.StderrPipe()
+	if err != nil {
+		slog.Error("Error getting stderr pipe in PS step", "error", err)
+		return data.Failed
+	}
+
+	waitgroup := &sync.WaitGroup{}
+	waitgroup.Add(2)
 
 	if err := cmd.Start(); err != nil {
 		slog.Error("Error starting PS step", "error", err)
 		return data.Failed
 	}
 
+	go func() {
+		scanner := bufio.NewScanner(outPipe)
+		for scanner.Scan() {
+			slog.Info("OUT FROM PS", "out", scanner.Text())
+		}
+		waitgroup.Done()
+	}()
+
+	go func() {
+		scanner := bufio.NewScanner(errPipe)
+		for scanner.Scan() {
+			slog.Info("ERR FROM PS", "out", scanner.Text())
+		}
+		waitgroup.Done()
+	}()
+
 	if err := cmd.Wait(); err != nil {
 		slog.Error("Error waiting for PS step", "error", err)
 		return data.Failed
 	}
 
-	//slog.Info("PS output", "out", stdout)
+	waitgroup.Wait()
 
 	slog.Info("Finished executing PS step", "step", step.Name)
 
