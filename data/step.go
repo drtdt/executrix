@@ -23,7 +23,7 @@ type IStep interface {
 
 type PSStep struct {
 	Name       string
-	scriptPath string
+	ScriptPath string
 	state      State
 	//Args       string
 	//DependsOn  []string
@@ -55,7 +55,7 @@ func readPSType(s map[string]interface{}) (*PSStep, error) {
 		return nil, errors.New("could not find script path")
 	} else {
 		slog.Info("Read script path", "path", val)
-		step.scriptPath = val
+		step.ScriptPath = val
 	}
 
 	step.state = Waiting

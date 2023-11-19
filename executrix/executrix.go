@@ -3,7 +3,7 @@ package executrix
 import (
 	"executrix/data"
 	"log/slog"
-	"time"
+	"os/exec"
 )
 
 func ExecutePipeline(p *data.Pipeline, stepInfo []data.StepInfo) {
@@ -25,22 +25,43 @@ func ExecutePipeline(p *data.Pipeline, stepInfo []data.StepInfo) {
 
 		switch s := pStep.(type) {
 		case *data.PSStep:
-			execPS(s)
+			pStep.SetState(execPS(s))
 		default:
 			slog.Error("Could not find Pipeline Step!")
 			pStep.SetState(data.Failed)
 			continue
 		}
+
 	}
 
 	p.IsRunning = false
 	slog.Info("Pipeline finished")
 }
 
-func execPS(step *data.PSStep) {
-	slog.Info("Excuting step", "step", step.Name)
-	// dummy implementation
-	time.Sleep(10000 * time.Millisecond)
+func execPS(step *data.PSStep) data.State {
+	slog.Info("Excuting PS step", "step", step.Name, "script", step.ScriptPath)
 
-	step.SetState(data.Success)
+	cmd := exec.Command("Powershell", "-nologo", "-noprofile", "-noninteractive", step.ScriptPath)
+
+	_, err := cmd.StdoutPipe() // todo
+	if err != nil {
+		slog.Error("Error getting stdout pipe in PS step", "error", err)
+		return data.Failed
+	}
+
+	if err := cmd.Start(); err != nil {
+		slog.Error("Error starting PS step", "error", err)
+		return data.Failed
+	}
+
+	if err := cmd.Wait(); err != nil {
+		slog.Error("Error waiting for PS step", "error", err)
+		return data.Failed
+	}
+
+	//slog.Info("PS output", "out", stdout)
+
+	slog.Info("Finished executing PS step", "step", step.Name)
+
+	return data.Success
 }

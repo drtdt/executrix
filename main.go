@@ -69,7 +69,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 	// reload pipeline files
 	if err := reloadPipelines(); err != nil {
-		slog.Error("Error while reloading pipeline configs", "err", err.Error())
+		slog.Error("Error while reloading pipeline configs", "err", err)
 		// todo
 	}
 
@@ -105,7 +105,7 @@ func triggerHandler(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		slog.Error("Could not read body from request", "err", err.Error())
+		slog.Error("Could not read body from request", "err", err)
 		fmt.Fprint(w, `{"started": false}`) // todo give reason
 		return
 	}
@@ -114,7 +114,7 @@ func triggerHandler(w http.ResponseWriter, r *http.Request) {
 
 	var stepInfo []data.StepInfo
 	if err = json.Unmarshal(body, &stepInfo); err != nil {
-		slog.Error("Could not unmarshall body from request", "err", err.Error())
+		slog.Error("Could not unmarshall body from request", "err", err)
 		fmt.Fprint(w, `{"started": false}`) // todo give reason
 		return
 	}
@@ -162,7 +162,7 @@ func main() {
 
 	configBaseDir, err := os.UserConfigDir()
 	if err != nil {
-		slog.Error("Failed to determine user default config location", "error", err.Error())
+		slog.Error("Failed to determine user default config location", "error", err)
 		os.Exit(-1)
 	}
 
@@ -170,14 +170,14 @@ func main() {
 
 	configDir := filepath.Join(configBaseDir, CONFIG_DIR_NAME)
 	if err = helper.CreateIfNotExisting(configDir); err != nil {
-		slog.Error("Error while checking for config path", "error", err.Error())
+		slog.Error("Error while checking for config path", "error", err)
 		os.Exit(-1)
 	}
 	slog.Info("Found config directory", "path", configDir)
 
 	pipelineDir := filepath.Join(configDir, PIPELINE_DIR_NAME)
 	if err = helper.CreateIfNotExisting(pipelineDir); err != nil {
-		slog.Error("Error while checking for pipeline path", "error", err.Error())
+		slog.Error("Error while checking for pipeline path", "error", err)
 		os.Exit(-1)
 	}
 	slog.Info("Found pipeline directory", "path", pipelineDir)
@@ -190,13 +190,13 @@ func main() {
 
 	indexTemplate, err := template.ParseFiles("html/index.html")
 	if err != nil {
-		slog.Error("Failed to parse index.html", "error", err.Error())
+		slog.Error("Failed to parse index.html", "error", err)
 		os.Exit(-1)
 	}
 
 	pipelineTemplate, err := template.ParseFiles("html/pipeline.html")
 	if err != nil {
-		slog.Error("Failed to parse pipeline.html", "error", err.Error())
+		slog.Error("Failed to parse pipeline.html", "error", err)
 		os.Exit(-1)
 	}
 
@@ -211,7 +211,7 @@ func main() {
 	slog.Info("Start listening", "port", PORT)
 	err = http.ListenAndServe(fmt.Sprintf("localhost:%d", PORT), nil)
 	if err != nil {
-		slog.Error("Failed to start server", "error", err.Error())
+		slog.Error("Failed to start server", "error", err)
 		os.Exit(-1)
 	}
 }
