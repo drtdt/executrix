@@ -26,7 +26,7 @@
         }
 
         td.running {
-            background-color: royalblue;
+            background-color: slateblue;
         }
 
         td.failed {
@@ -41,29 +41,54 @@
             background-color: yellow;
         }
 
+        .split {
+            height: 100%;
+            width: 50%;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            overflow-x: hidden;
+            padding-top: 20px;
+        }
+
+        .left {
+            left: 0;
+            background-color: lightslategray;
+        }
+
+        .right {
+            right: 0;
+            color: lightskyblue;
+            background-color: black;
+        }
+
     </style>
 </head>
 <body>
-    <h1>Pipeline {{.Name}}</h1>
-    <p><a href="/">Back</a></p>
-    <input type="submit" value="RUN" id="run" onclick="run()">
-    <input type="submit" value="STOP" id="stop" onclick="kill()">
-    <input type="submit" value="NEW" id="new" onclick="reset()">
-    <table>
-        <tr>
-            <th class="min">Active</th>
-            <th class="min">Single</th>
-            <th>Step</th>
-        <tr>
-        {{range .Steps}}
-        <tr>
-            <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()"></td>
-            <td class="min"><input type="checkbox" id="single_{{.Name}}" name="single_{{.Name}}" onclick="update()" disabled></td>
-            <td class="" id="name_{{.Name}}">{{.Name}}</td>
-        <tr>
-        {{end}}
-    </table>
-
+    <div class="split left">
+        <p><a href="/">Back</a></p>
+        <h1>Pipeline {{.Name}}</h1>
+        <input type="submit" value="RUN" id="run" onclick="run()">
+        <input type="submit" value="STOP" id="stop" onclick="kill()">
+        <input type="submit" value="NEW" id="new" onclick="reset()">
+    
+        <table>
+            <tr>
+                <th class="min">Active</th>
+                <th class="min">Single</th>
+                <th>Step</th>
+            <tr>
+            {{range .Steps}}
+            <tr>
+                <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()"></td>
+                <td class="min"><input type="checkbox" id="single_{{.Name}}" name="single_{{.Name}}" onclick="update()" disabled></td>
+                <td class="" id="name_{{.Name}}">{{.Name}}</td>
+            <tr>
+            {{end}}
+        </table>
+    </div>
+    <div class="split right">Blah</div>
+    
     <script>
         function convertStateId(id) {
             switch(id) {
