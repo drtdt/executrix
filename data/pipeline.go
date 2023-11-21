@@ -13,7 +13,6 @@ type Pipeline struct {
 	Name        string
 	Description string
 	Steps       []IStep
-	IsRunning   bool
 }
 
 type StateInfo struct {
@@ -56,7 +55,6 @@ func FromJson(path string) (Pipeline, error) {
 	slog.Debug("Successfully unmarshalled file content", "content", p)
 
 	var pipeline Pipeline
-	pipeline.IsRunning = false
 
 	if val, ok := p["Name"].(string); !ok {
 		return Pipeline{}, errors.New("could not find pipeline name")

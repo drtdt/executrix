@@ -2,22 +2,47 @@ package executrix
 
 import (
 	"bufio"
+	"errors"
 	"executrix/data"
 	"log/slog"
 	"os/exec"
 	"sync"
 )
 
-func ExecutePipeline(p *data.Pipeline, stepInfo []data.StepInfo) {
+type Execution struct {
+	pipeline   *data.Pipeline
+	stepInfo   []data.StepInfo
+	outputs    map[string][]string
+	currentCmd *exec.Cmd
+}
+
+func NewExecution(p *data.Pipeline, stepInfo []data.StepInfo) (*Execution, error) {
+	if p == nil {
+		return nil, errors.New("pipeline must not be nil")
+	}
+
+	return &Execution{
+		pipeline:   p,
+		stepInfo:   stepInfo,
+		outputs:    nil,
+		currentCmd: nil,
+	}, nil
+}
+
+func (e *Execution) PipelineName() string {
+	return e.pipeline.Name
+}
+
+func (e *Execution) Execute() {
 	slog.Info("Starting pipeline")
 
-	for _, step := range stepInfo {
+	for _, step := range e.stepInfo {
 		if !step.Checked {
 			slog.Info("Skipping unchecked step", "step", step.StepName)
 			continue
 		}
 
-		pStep := p.FindStep(step.StepName)
+		pStep := e.pipeline.FindStep(step.StepName)
 		if pStep == nil {
 			slog.Error("Could not find Pipeline Step!")
 			// todo error handling
@@ -35,7 +60,6 @@ func ExecutePipeline(p *data.Pipeline, stepInfo []data.StepInfo) {
 		}
 	}
 
-	p.IsRunning = false
 	slog.Info("Pipeline finished")
 }
 

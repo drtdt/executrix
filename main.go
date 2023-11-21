@@ -26,18 +26,30 @@ type ServerConfig struct {
 
 var serverConfig ServerConfig
 
-type IndexPageData struct {
+type ServerStore struct {
 	Pipelines []data.Pipeline
+	Execution *executrix.Execution
 }
 
-func (d IndexPageData) IndexFromName(name string) int {
-	return slices.IndexFunc(d.Pipelines, func(p data.Pipeline) bool { return p.Name == name })
+func (store ServerStore) PipelineIndexFromName(name string) int {
+	return slices.IndexFunc(store.Pipelines, func(p data.Pipeline) bool { return p.Name == name })
 }
 
-var indexPageData IndexPageData
+func (store *ServerStore) Execute() {
+	if store.Execution == nil {
+		slog.Warn("Trying to call ServerStore::Execute when ServerStore::Execution is nil")
+		return
+	}
+
+	store.Execution.Execute()
+
+	store.Execution = nil
+}
+
+var store ServerStore
 
 func reloadPipelines() error {
-	indexPageData.Pipelines = nil
+	store.Pipelines = nil
 	slog.Debug("Cleared piplines before reloading")
 
 	result, err := helper.FindAllFiles(serverConfig.pipelineDir)
@@ -53,7 +65,7 @@ func reloadPipelines() error {
 			continue
 		}
 
-		indexPageData.Pipelines = append(indexPageData.Pipelines, pipeline)
+		store.Pipelines = append(store.Pipelines, pipeline)
 	}
 
 	return nil
@@ -73,7 +85,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		// todo
 	}
 
-	serverConfig.pages["index"].Execute(w, indexPageData)
+	serverConfig.pages["index"].Execute(w, store)
 }
 
 func pipelineHandler(w http.ResponseWriter, r *http.Request) {
@@ -81,11 +93,11 @@ func pipelineHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("Request pipeline page", "request", *r)
 
 	id := strings.TrimPrefix(r.URL.Path, "/pipeline/")
-	if idx := indexPageData.IndexFromName(id); idx < 0 {
+	if idx := store.PipelineIndexFromName(id); idx < 0 {
 		slog.Error("Could not find pipeline", "name", id)
 		// todo
 	} else {
-		serverConfig.pages["pipeline"].Execute(w, indexPageData.Pipelines[idx])
+		serverConfig.pages["pipeline"].Execute(w, store.Pipelines[idx])
 	}
 }
 
@@ -93,10 +105,17 @@ func triggerHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Request to trigger endpoint")
 	slog.Debug("Request to trigger endpoint", "request", *r)
 
+	if store.Execution != nil {
+		// todo queueing?
+		slog.Error("Already running a pipeline")
+		fmt.Fprint(w, `{"started": false}`) // todo give reason
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 
 	id := strings.TrimPrefix(r.URL.Path, "/trigger/")
-	idx := indexPageData.IndexFromName(id)
+	idx := store.PipelineIndexFromName(id)
 	if idx < 0 {
 		slog.Error("Could not find pipeline", "name", id)
 		fmt.Fprint(w, `{"started": false}`) // todo give reason
@@ -121,9 +140,16 @@ func triggerHandler(w http.ResponseWriter, r *http.Request) {
 
 	slog.Debug("parsed body", "body", stepInfo)
 
-	indexPageData.Pipelines[idx].IsRunning = true
+	exec, err := executrix.NewExecution(&store.Pipelines[idx], stepInfo)
+	if err != nil {
+		slog.Error("Could not unmarshall body from request", "err", err)
+		fmt.Fprint(w, `{"started": false}`) // todo give reason
+		return
+	}
 
-	go executrix.ExecutePipeline(&indexPageData.Pipelines[idx], stepInfo)
+	store.Execution = exec
+
+	go store.Execute()
 
 	fmt.Fprint(w, `{"started": true}`)
 }
@@ -135,14 +161,14 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	id := strings.TrimPrefix(r.URL.Path, "/status/")
-	idx := indexPageData.IndexFromName(id)
+	idx := store.PipelineIndexFromName(id)
 	if idx < 0 {
 		slog.Error("Could not find pipeline", "name", id)
 		fmt.Fprint(w, `{"running": false}`) // todo error handling
 		return
 	}
 
-	bytes, err := json.Marshal(indexPageData.Pipelines[idx].GetStepStates())
+	bytes, err := json.Marshal(store.Pipelines[idx].GetStepStates())
 	if err != nil {
 		slog.Error("Could not create status data")
 		fmt.Fprint(w, `{"running": false}`) // todo error handling
@@ -150,7 +176,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprint(w, "{"+
-		`"running": `+strconv.FormatBool(indexPageData.Pipelines[idx].IsRunning)+", "+
+		`"running": `+strconv.FormatBool(store.Execution != nil && store.Execution.PipelineName() == id)+", "+
 		`"stepStates": `+string(bytes)+
 		"}")
 }
