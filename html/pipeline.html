@@ -7,10 +7,16 @@
             border-collapse: separate;
             width: 100%;
         }
+        
         td, th {
             text-align: left;
             padding: 8px;
         }
+
+        th {
+            background-color: #888888;
+        }
+
         tr {
             background-color: #dddddd;
         }
@@ -58,6 +64,12 @@
 
         .right {
             right: 0;
+        }
+
+        textarea {
+            height: 100%;
+            width: 100%;
+            resize: none;
             color: lightskyblue;
             background-color: black;
         }
@@ -82,12 +94,14 @@
             <tr>
                 <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()"></td>
                 <td class="min"><input type="checkbox" id="single_{{.Name}}" name="single_{{.Name}}" onclick="update()" disabled></td>
-                <td class="" id="name_{{.Name}}">{{.Name}}</td>
+                <td class="" id="step_{{.Name}}" onclick="selectStep(this.id)">{{.Name}}</td>
             <tr>
             {{end}}
         </table>
     </div>
-    <div class="split right">Blah</div>
+    <div class="split right">
+        <textarea id="outPane" readonly></textarea>
+    </div>
     
     <script>
         function convertStateId(id) {
@@ -109,7 +123,7 @@
                     .then(response => response.json())
                     .then(data => {
                         data.stepStates.forEach(state => {
-                            document.getElementById("name_" + state.Step).classList = convertStateId(state.State)
+                            document.getElementById("step_" + state.Step).classList = convertStateId(state.State)
                         })
 
                         if (data.running) {
@@ -165,6 +179,23 @@
             }
 
             start()
+        }
+
+        function selectStep(clicked_id) {
+            console.log("Clicked on", clicked_id)
+
+            const url = "/output/" + clicked_id.replace('step_', '')
+            const pane = document.getElementById("outPane")
+
+            const retrieve = () => {
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        pane.value = data.text
+                    })
+            }
+
+            retrieve()
         }
 
         function anyActive() {

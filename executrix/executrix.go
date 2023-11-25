@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"executrix/data"
+	"executrix/helper"
 	"log/slog"
 	"os/exec"
 	"sync"
@@ -12,8 +13,9 @@ import (
 type Execution struct {
 	pipeline   *data.Pipeline
 	stepInfo   []data.StepInfo
-	outputs    map[string][]string
+	outputs    map[string]*string
 	currentCmd *exec.Cmd
+	finished   bool
 }
 
 func NewExecution(p *data.Pipeline, stepInfo []data.StepInfo) (*Execution, error) {
@@ -24,13 +26,31 @@ func NewExecution(p *data.Pipeline, stepInfo []data.StepInfo) (*Execution, error
 	return &Execution{
 		pipeline:   p,
 		stepInfo:   stepInfo,
-		outputs:    nil,
+		outputs:    make(map[string]*string),
 		currentCmd: nil,
+		finished:   false,
 	}, nil
 }
 
 func (e *Execution) PipelineName() string {
 	return e.pipeline.Name
+}
+
+func (e *Execution) SetFinished() {
+	e.finished = true
+}
+
+func (e Execution) IsFinished() bool {
+	return e.finished
+}
+
+func (e Execution) StepOutput(step string) (string, error) {
+	output, ok := e.outputs[step]
+	if !ok {
+		return "", errors.New("step not found")
+	}
+
+	return *output, nil
 }
 
 func (e *Execution) Execute() {
@@ -48,11 +68,13 @@ func (e *Execution) Execute() {
 			// todo error handling
 		}
 
+		s := ""
+		e.outputs[step.StepName] = &s
 		pStep.SetState(data.Running)
 
 		switch s := pStep.(type) {
 		case *data.PSStep:
-			pStep.SetState(execPS(s))
+			pStep.SetState(execPS(s, e.outputs[step.StepName]))
 		default:
 			slog.Error("Could not find Pipeline Step!")
 			pStep.SetState(data.Failed)
@@ -63,7 +85,8 @@ func (e *Execution) Execute() {
 	slog.Info("Pipeline finished")
 }
 
-func execPS(step *data.PSStep) data.State {
+// todo make this a member of PSStep?
+func execPS(step *data.PSStep, out *string) data.State {
 	slog.Info("Excuting PS step", "step", step.Name, "script", step.ScriptPath)
 
 	cmd := exec.Command("Powershell", "-nologo", "-noprofile", "-noninteractive", step.ScriptPath)
@@ -91,7 +114,8 @@ func execPS(step *data.PSStep) data.State {
 	go func() {
 		scanner := bufio.NewScanner(outPipe)
 		for scanner.Scan() {
-			slog.Info("OUT FROM PS", "out", scanner.Text())
+			//slog.Info("OUT FROM PS", "out", scanner.Text())
+			*out += helper.CleanUpString(scanner.Text()) + "\\n"
 		}
 		waitgroup.Done()
 	}()
@@ -99,7 +123,8 @@ func execPS(step *data.PSStep) data.State {
 	go func() {
 		scanner := bufio.NewScanner(errPipe)
 		for scanner.Scan() {
-			slog.Info("ERR FROM PS", "out", scanner.Text())
+			//slog.Info("ERR FROM PS", "out", scanner.Text())
+			*out += helper.CleanUpString(scanner.Text()) + "\\n"
 		}
 		waitgroup.Done()
 	}()

@@ -43,7 +43,7 @@ func (store *ServerStore) Execute() {
 
 	store.Execution.Execute()
 
-	store.Execution = nil
+	store.Execution.SetFinished()
 }
 
 var store ServerStore
@@ -176,9 +176,33 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprint(w, "{"+
-		`"running": `+strconv.FormatBool(store.Execution != nil && store.Execution.PipelineName() == id)+", "+
+		`"running": `+strconv.FormatBool(store.Execution != nil && !store.Execution.IsFinished())+", "+
 		`"stepStates": `+string(bytes)+
 		"}")
+}
+
+func outputHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Request to output endpoint")
+	slog.Debug("Request to output endpoint", "request", *r)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if store.Execution == nil {
+		slog.Error("No execution set")
+		fmt.Fprint(w, `{"text": "No execution set!"}`)
+		return
+	}
+
+	id := strings.TrimPrefix(r.URL.Path, "/output/")
+	output, err := store.Execution.StepOutput(id)
+	if err != nil {
+		slog.Error("Error retrieving step output", "step", id)
+		fmt.Fprint(w, `{"text": "Error retrieving step output!"}`)
+		return
+	}
+
+	slog.Debug("Sending output", "step", id, "text", output)
+	fmt.Fprint(w, `{"text": "`+output+`"}`)
 }
 
 func main() {
@@ -233,6 +257,7 @@ func main() {
 	http.HandleFunc("/pipeline/", pipelineHandler)
 	http.HandleFunc("/trigger/", triggerHandler)
 	http.HandleFunc("/status/", statusHandler)
+	http.HandleFunc("/output/", outputHandler)
 
 	slog.Info("Start listening", "port", PORT)
 	err = http.ListenAndServe(fmt.Sprintf("localhost:%d", PORT), nil)

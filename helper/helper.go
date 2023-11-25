@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func Exists(path string) (bool, error) {
@@ -78,4 +79,9 @@ func ReadFile(path string) ([]byte, error) {
 	}
 
 	return bytes, nil
+}
+
+func CleanUpString(s string) string {
+	strings.ReplaceAll(s, `'`, `"`)
+	return strings.ReplaceAll(s, `\`, `\\`)
 }
