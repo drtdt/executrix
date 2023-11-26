@@ -1,212 +1,15 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"html/template"
-	"io"
 	"log/slog"
-	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
-	"strconv"
-	"strings"
 
-	"executrix/data"
-	"executrix/executrix"
 	"executrix/helper"
+	"executrix/server"
 )
 
-type ServerConfig struct {
-	configDir   string
-	pipelineDir string
-	pages       map[string]*template.Template
-}
-
-var serverConfig ServerConfig
-
-type ServerStore struct {
-	Pipelines []data.Pipeline
-	Execution *executrix.Execution
-}
-
-func (store ServerStore) PipelineIndexFromName(name string) int {
-	return slices.IndexFunc(store.Pipelines, func(p data.Pipeline) bool { return p.Name == name })
-}
-
-func (store *ServerStore) Execute() {
-	if store.Execution == nil {
-		slog.Warn("Trying to call ServerStore::Execute when ServerStore::Execution is nil")
-		return
-	}
-
-	store.Execution.Execute()
-
-	store.Execution.SetFinished()
-}
-
-var store ServerStore
-
-func reloadPipelines() error {
-	store.Pipelines = nil
-	slog.Debug("Cleared piplines before reloading")
-
-	result, err := helper.FindAllFiles(serverConfig.pipelineDir)
-	if err != nil {
-		return err
-	}
-
-	for _, file := range result {
-		pipeline, err := data.FromJson(file)
-		if err != nil {
-			slog.Error("Error reading pipline configuration", "file", file, "error", err)
-			// todo - put info to html?
-			continue
-		}
-
-		store.Pipelines = append(store.Pipelines, pipeline)
-	}
-
-	return nil
-}
-
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Request to index page")
-	slog.Debug("Request to index page", "request", *r)
-
-	// todo check there's nothing after '/'
-
-	// todo no reload if pipelines are running!
-
-	// reload pipeline files
-	if err := reloadPipelines(); err != nil {
-		slog.Error("Error while reloading pipeline configs", "err", err)
-		// todo
-	}
-
-	serverConfig.pages["index"].Execute(w, store)
-}
-
-func pipelineHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Request pipeline page")
-	slog.Debug("Request pipeline page", "request", *r)
-
-	id := strings.TrimPrefix(r.URL.Path, "/pipeline/")
-	if idx := store.PipelineIndexFromName(id); idx < 0 {
-		slog.Error("Could not find pipeline", "name", id)
-		// todo
-	} else {
-		serverConfig.pages["pipeline"].Execute(w, store.Pipelines[idx])
-	}
-}
-
-func triggerHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Request to trigger endpoint")
-	slog.Debug("Request to trigger endpoint", "request", *r)
-
-	if store.Execution != nil {
-		// todo queueing?
-		slog.Error("Already running a pipeline")
-		fmt.Fprint(w, `{"started": false}`) // todo give reason
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	id := strings.TrimPrefix(r.URL.Path, "/trigger/")
-	idx := store.PipelineIndexFromName(id)
-	if idx < 0 {
-		slog.Error("Could not find pipeline", "name", id)
-		fmt.Fprint(w, `{"started": false}`) // todo give reason
-		return
-	}
-
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error("Could not read body from request", "err", err)
-		fmt.Fprint(w, `{"started": false}`) // todo give reason
-		return
-	}
-
-	slog.Debug("recieved body", "body", body)
-
-	var stepInfo []data.StepInfo
-	if err = json.Unmarshal(body, &stepInfo); err != nil {
-		slog.Error("Could not unmarshall body from request", "err", err)
-		fmt.Fprint(w, `{"started": false}`) // todo give reason
-		return
-	}
-
-	slog.Debug("parsed body", "body", stepInfo)
-
-	exec, err := executrix.NewExecution(&store.Pipelines[idx], stepInfo)
-	if err != nil {
-		slog.Error("Could not unmarshall body from request", "err", err)
-		fmt.Fprint(w, `{"started": false}`) // todo give reason
-		return
-	}
-
-	store.Execution = exec
-
-	go store.Execute()
-
-	fmt.Fprint(w, `{"started": true}`)
-}
-
-func statusHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Request to status endpoint")
-	slog.Debug("Request to status endpoint", "request", *r)
-
-	w.Header().Set("Content-Type", "application/json")
-
-	id := strings.TrimPrefix(r.URL.Path, "/status/")
-	idx := store.PipelineIndexFromName(id)
-	if idx < 0 {
-		slog.Error("Could not find pipeline", "name", id)
-		fmt.Fprint(w, `{"running": false}`) // todo error handling
-		return
-	}
-
-	bytes, err := json.Marshal(store.Pipelines[idx].GetStepStates())
-	if err != nil {
-		slog.Error("Could not create status data")
-		fmt.Fprint(w, `{"running": false}`) // todo error handling
-		return
-	}
-
-	fmt.Fprint(w, "{"+
-		`"running": `+strconv.FormatBool(store.Execution != nil && !store.Execution.IsFinished())+", "+
-		`"stepStates": `+string(bytes)+
-		"}")
-}
-
-func outputHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Request to output endpoint")
-	slog.Debug("Request to output endpoint", "request", *r)
-
-	w.Header().Set("Content-Type", "application/json")
-
-	if store.Execution == nil {
-		slog.Error("No execution set")
-		fmt.Fprint(w, `{"text": "No execution set!"}`)
-		return
-	}
-
-	id := strings.TrimPrefix(r.URL.Path, "/output/")
-	output, err := store.Execution.StepOutput(id)
-	if err != nil {
-		slog.Error("Error retrieving step output", "step", id)
-		fmt.Fprint(w, `{"text": "Error retrieving step output!"}`)
-		return
-	}
-
-	slog.Debug("Sending output", "step", id, "text", output)
-	fmt.Fprint(w, `{"text": "`+output+`"}`)
-}
-
 func main() {
-	const PORT uint16 = 8080
 	const CONFIG_DIR_NAME = "Executrix"
 	const PIPELINE_DIR_NAME = "pipelines"
 
@@ -232,37 +35,11 @@ func main() {
 	}
 	slog.Info("Found pipeline directory", "path", pipelineDir)
 
-	serverConfig = ServerConfig{
-		configDir:   configDir,
-		pipelineDir: pipelineDir,
-		pages:       make(map[string]*template.Template),
-	}
-
-	indexTemplate, err := template.ParseFiles("html/index.html")
+	server, err := server.NewServer(configDir, pipelineDir)
 	if err != nil {
-		slog.Error("Failed to parse index.html", "error", err)
+		slog.Error("Error while configuring server", "error", err)
 		os.Exit(-1)
 	}
 
-	pipelineTemplate, err := template.ParseFiles("html/pipeline.html")
-	if err != nil {
-		slog.Error("Failed to parse pipeline.html", "error", err)
-		os.Exit(-1)
-	}
-
-	serverConfig.pages["index"] = indexTemplate
-	serverConfig.pages["pipeline"] = pipelineTemplate
-
-	http.HandleFunc("/", indexHandler)
-	http.HandleFunc("/pipeline/", pipelineHandler)
-	http.HandleFunc("/trigger/", triggerHandler)
-	http.HandleFunc("/status/", statusHandler)
-	http.HandleFunc("/output/", outputHandler)
-
-	slog.Info("Start listening", "port", PORT)
-	err = http.ListenAndServe(fmt.Sprintf("localhost:%d", PORT), nil)
-	if err != nil {
-		slog.Error("Failed to start server", "error", err)
-		os.Exit(-1)
-	}
+	server.Serve()
 }

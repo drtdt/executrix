@@ -3,10 +3,9 @@ package data
 import (
 	"encoding/json"
 	"errors"
+	"executrix/helper"
 	"log/slog"
 	"slices"
-
-	"executrix/helper"
 )
 
 type Pipeline struct {
