@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"executrix/data"
+	server "executrix/server/state"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -10,10 +10,10 @@ import (
 
 type PipelineHandler struct {
 	page      template.Template
-	pipelines data.IPipelineContainer
+	pipelines server.IPipelineContainer
 }
 
-func NewPipelineHandler(page template.Template, pipelines data.IPipelineContainer) PipelineHandler {
+func NewPipelineHandler(page template.Template, pipelines server.IPipelineContainer) PipelineHandler {
 	return PipelineHandler{
 		page:      page,
 		pipelines: pipelines,

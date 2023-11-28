@@ -1,24 +1,22 @@
 package executrix
 
 import (
-	"bufio"
 	"errors"
 	"executrix/data"
-	"executrix/helper"
+	"executrix/pipeline"
 	"log/slog"
 	"os/exec"
-	"sync"
 )
 
 type Execution struct {
-	pipeline   *data.Pipeline
+	pipeline   *pipeline.Pipeline
 	stepInfo   []data.StepInfo
 	outputs    map[string]*string
 	currentCmd *exec.Cmd
 	finished   bool
 }
 
-func NewExecution(p *data.Pipeline, stepInfo []data.StepInfo) (*Execution, error) {
+func NewExecution(p *pipeline.Pipeline, stepInfo []data.StepInfo) (*Execution, error) {
 	if p == nil {
 		return nil, errors.New("pipeline must not be nil")
 	}
@@ -70,73 +68,9 @@ func (e *Execution) Execute() {
 
 		s := ""
 		e.outputs[step.StepName] = &s
-		pStep.SetState(data.Running)
 
-		switch s := pStep.(type) {
-		case *data.PSStep:
-			pStep.SetState(execPS(s, e.outputs[step.StepName]))
-		default:
-			slog.Error("Could not find Pipeline Step!")
-			pStep.SetState(data.Failed)
-			continue
-		}
+		pStep.Execute(e.outputs[step.StepName])
 	}
 
 	slog.Info("Pipeline finished")
-}
-
-// todo make this a member of PSStep?
-func execPS(step *data.PSStep, out *string) data.State {
-	slog.Info("Excuting PS step", "step", step.Name, "script", step.ScriptPath)
-
-	cmd := exec.Command("Powershell", "-nologo", "-noprofile", "-noninteractive", step.ScriptPath)
-
-	outPipe, err := cmd.StdoutPipe()
-	if err != nil {
-		slog.Error("Error getting stdout pipe in PS step", "error", err)
-		return data.Failed
-	}
-
-	errPipe, err := cmd.StderrPipe()
-	if err != nil {
-		slog.Error("Error getting stderr pipe in PS step", "error", err)
-		return data.Failed
-	}
-
-	waitgroup := &sync.WaitGroup{}
-	waitgroup.Add(2)
-
-	if err := cmd.Start(); err != nil {
-		slog.Error("Error starting PS step", "error", err)
-		return data.Failed
-	}
-
-	go func() {
-		scanner := bufio.NewScanner(outPipe)
-		for scanner.Scan() {
-			//slog.Info("OUT FROM PS", "out", scanner.Text())
-			*out += helper.CleanUpString(scanner.Text()) + "\\n"
-		}
-		waitgroup.Done()
-	}()
-
-	go func() {
-		scanner := bufio.NewScanner(errPipe)
-		for scanner.Scan() {
-			//slog.Info("ERR FROM PS", "out", scanner.Text())
-			*out += helper.CleanUpString(scanner.Text()) + "\\n"
-		}
-		waitgroup.Done()
-	}()
-
-	if err := cmd.Wait(); err != nil {
-		slog.Error("Error waiting for PS step", "error", err)
-		return data.Failed
-	}
-
-	waitgroup.Wait()
-
-	slog.Info("Finished executing PS step", "step", step.Name)
-
-	return data.Success
 }

@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"executrix/data"
+	server "executrix/server/state"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -9,10 +9,10 @@ import (
 )
 
 type OutputHandler struct {
-	state data.IServerState
+	state server.IServerState
 }
 
-func NewOutputHandler(state data.IServerState) OutputHandler {
+func NewOutputHandler(state server.IServerState) OutputHandler {
 	return OutputHandler{
 		state: state,
 	}

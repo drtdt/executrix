@@ -5,12 +5,26 @@ import (
 	"executrix/data"
 	"executrix/executrix"
 	"executrix/helper"
+	"executrix/pipeline"
 	"log/slog"
 	"slices"
 )
 
+type IPipelineContainer interface {
+	PipelineFromName(name string) *pipeline.Pipeline
+}
+
+type IServerState interface {
+	IPipelineContainer
+	HasExecution() bool
+	IsRunning() bool
+	StepOutput(name string) (string, error)
+	NewExecution(p *pipeline.Pipeline, stepInfo []data.StepInfo) error
+	Execute()
+}
+
 type ServerState struct {
-	Pipelines []data.Pipeline
+	Pipelines []pipeline.Pipeline
 	execution *executrix.Execution
 }
 
@@ -25,8 +39,8 @@ func NewServerState(pipelineDir string) (ServerState, error) {
 	return state, nil
 }
 
-func (s *ServerState) PipelineFromName(name string) *data.Pipeline {
-	if idx := slices.IndexFunc(s.Pipelines, func(p data.Pipeline) bool { return p.Name == name }); idx < 0 {
+func (s *ServerState) PipelineFromName(name string) *pipeline.Pipeline {
+	if idx := slices.IndexFunc(s.Pipelines, func(p pipeline.Pipeline) bool { return p.Name == name }); idx < 0 {
 		return nil
 	} else {
 		return &s.Pipelines[idx]
@@ -49,7 +63,7 @@ func (s *ServerState) StepOutput(step string) (string, error) {
 	return s.execution.StepOutput(step)
 }
 
-func (s *ServerState) NewExecution(p *data.Pipeline, stepInfo []data.StepInfo) error {
+func (s *ServerState) NewExecution(p *pipeline.Pipeline, stepInfo []data.StepInfo) error {
 	exec, err := executrix.NewExecution(p, stepInfo)
 	if err != nil {
 		return errors.New("failed to create new execution")
@@ -81,7 +95,7 @@ func (s *ServerState) reloadPipelines(pipelineDir string) error {
 	}
 
 	for _, file := range result {
-		pipeline, err := data.FromJson(file)
+		pipeline, err := pipeline.FromJson(file)
 		if err != nil {
 			slog.Error("Error reading pipline configuration", "file", file, "error", err)
 			// todo - put info to html?

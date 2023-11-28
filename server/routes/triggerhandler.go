@@ -3,6 +3,7 @@ package routes
 import (
 	"encoding/json"
 	"executrix/data"
+	server "executrix/server/state"
 	"fmt"
 	"io"
 	"log/slog"
@@ -11,10 +12,10 @@ import (
 )
 
 type TriggerHandler struct {
-	state data.IServerState
+	state server.IServerState
 }
 
-func NewTriggerHandler(state data.IServerState) TriggerHandler {
+func NewTriggerHandler(state server.IServerState) TriggerHandler {
 	return TriggerHandler{
 		state: state,
 	}

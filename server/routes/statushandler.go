@@ -2,7 +2,7 @@ package routes
 
 import (
 	"encoding/json"
-	"executrix/data"
+	server "executrix/server/state"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,10 +11,10 @@ import (
 )
 
 type StatusHandler struct {
-	state data.IServerState
+	state server.IServerState
 }
 
-func NewStatusHandler(state data.IServerState) StatusHandler {
+func NewStatusHandler(state server.IServerState) StatusHandler {
 	return StatusHandler{
 		state: state,
 	}

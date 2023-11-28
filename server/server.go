@@ -2,6 +2,7 @@ package server
 
 import (
 	"executrix/server/routes"
+	server "executrix/server/state"
 	"fmt"
 	"net/http"
 
@@ -11,7 +12,7 @@ import (
 
 type Server struct {
 	config       ServerConfig
-	state        ServerState
+	state        server.ServerState
 	indexPage    template.Template
 	pipelinePage template.Template
 }
@@ -35,7 +36,7 @@ func NewServer(configDir string, pipelineDir string) (Server, error) {
 		return Server{}, err
 	}
 
-	state, err := NewServerState(pipelineDir)
+	state, err := server.NewServerState(pipelineDir)
 	if err != nil {
 		slog.Error("Failed to read pipeline configs", "error", err)
 		return Server{}, err

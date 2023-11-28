@@ -1,9 +1,10 @@
-package data
+package pipeline
 
 import (
 	"encoding/json"
 	"errors"
 	"executrix/helper"
+	"executrix/step"
 	"log/slog"
 	"slices"
 )
@@ -11,16 +12,16 @@ import (
 type Pipeline struct {
 	Name        string
 	Description string
-	Steps       []IStep
+	Steps       []step.IStep
 }
 
 type StateInfo struct {
 	Step  string
-	State State
+	State step.State
 }
 
-func (p Pipeline) FindStep(name string) IStep {
-	if idx := slices.IndexFunc(p.Steps, func(s IStep) bool { return s.ShowAs() == name }); idx < 0 {
+func (p Pipeline) FindStep(name string) step.IStep {
+	if idx := slices.IndexFunc(p.Steps, func(s step.IStep) bool { return s.ShowAs() == name }); idx < 0 {
 		return nil
 	} else {
 		return p.Steps[idx]
@@ -81,7 +82,7 @@ func FromJson(path string) (Pipeline, error) {
 				return Pipeline{}, errors.New("unexpected type for step")
 			}
 
-			step, err := FromJSON(val)
+			step, err := step.FromJSON(val)
 			if err != nil {
 				return Pipeline{}, err
 			}
