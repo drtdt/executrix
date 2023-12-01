@@ -1,8 +1,9 @@
 package server
 
 import (
+	"executrix/server/config"
 	"executrix/server/routes"
-	server "executrix/server/state"
+	"executrix/server/state"
 	"fmt"
 	"net/http"
 
@@ -11,18 +12,13 @@ import (
 )
 
 type Server struct {
-	config       ServerConfig
-	state        server.ServerState
+	config       config.ServerConfig
+	state        state.ServerState
 	indexPage    template.Template
 	pipelinePage template.Template
 }
 
-func NewServer(configDir string, pipelineDir string) (Server, error) {
-	config := ServerConfig{
-		configDir:   configDir,
-		pipelineDir: pipelineDir,
-		port:        8080, // TODO make configurable!
-	}
+func NewServer(config config.ServerConfig) (Server, error) {
 
 	indexTemplate, err := template.ParseFiles("html/index.html")
 	if err != nil {
@@ -36,7 +32,7 @@ func NewServer(configDir string, pipelineDir string) (Server, error) {
 		return Server{}, err
 	}
 
-	state, err := server.NewServerState(pipelineDir)
+	state, err := state.NewServerState(config.GetPipelineDir())
 	if err != nil {
 		slog.Error("Failed to read pipeline configs", "error", err)
 		return Server{}, err
@@ -65,8 +61,8 @@ func (s *Server) Serve() error {
 	mux.Handle("/status/", statusHandler)
 	mux.Handle("/output/", outputHandler)
 
-	slog.Info("Start listening", "port", s.config.port)
-	if err := http.ListenAndServe(fmt.Sprintf("localhost:%d", s.config.port), mux); err != nil {
+	slog.Info("Start listening", "port", s.config.GetPort())
+	if err := http.ListenAndServe(fmt.Sprintf("localhost:%d", s.config.GetPort()), mux); err != nil {
 		slog.Error("Failed to start server", "error", err)
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 
 	"executrix/helper"
 	"executrix/server"
+	"executrix/server/config"
 )
 
 func main() {
@@ -35,7 +36,14 @@ func main() {
 	}
 	slog.Info("Found pipeline directory", "path", pipelineDir)
 
-	server, err := server.NewServer(configDir, pipelineDir)
+	config, err := config.FromJson(configDir, pipelineDir)
+	if err != nil {
+		slog.Error("Error while reading server config", "error", err)
+		os.Exit(-1)
+	}
+	slog.Info("Successfully read server config")
+
+	server, err := server.NewServer(config)
 	if err != nil {
 		slog.Error("Error while configuring server", "error", err)
 		os.Exit(-1)
