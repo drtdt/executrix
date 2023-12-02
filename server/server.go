@@ -1,14 +1,14 @@
 package server
 
 import (
+	"fmt"
+	"log/slog"
+	"net/http"
+	"text/template"
+
 	"executrix/server/config"
 	"executrix/server/routes"
 	"executrix/server/state"
-	"fmt"
-	"net/http"
-
-	"log/slog"
-	"text/template"
 )
 
 type Server struct {

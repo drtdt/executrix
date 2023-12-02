@@ -3,10 +3,13 @@ package config
 import (
 	"encoding/json"
 	"errors"
-	"executrix/helper"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strconv"
+
+	"executrix/constants"
+	"executrix/helper"
 )
 
 type ServerConfig struct {
@@ -15,8 +18,25 @@ type ServerConfig struct {
 	port        uint16
 }
 
-func FromJson(configDir string, pipelineDir string) (ServerConfig, error) {
-	bytes, err := helper.ReadFile(filepath.Join(configDir, "server.json"))
+func FromJson(configDir string) (ServerConfig, error) {
+	serverConfigPath := filepath.Join(configDir, constants.SERVER_CONFIG_FILE)
+	pipelineDir := filepath.Join(configDir, constants.PIPELINE_DIR_NAME)
+
+	pathExists, err := helper.Exists(serverConfigPath)
+	if err != nil {
+		slog.Error("Failed checking for server config path", "path", serverConfigPath)
+		return ServerConfig{}, err
+	}
+
+	if !pathExists {
+		slog.Info("Server config not found - creating file with default settings", "path", serverConfigPath)
+		if err := createDefaultServerConfig(serverConfigPath); err != nil {
+			slog.Error("Failed creating default server config", "path", serverConfigPath)
+			return ServerConfig{}, err
+		}
+	}
+
+	bytes, err := helper.ReadFile(serverConfigPath)
 	if err != nil {
 		return ServerConfig{}, err
 	}
@@ -56,4 +76,11 @@ func (s ServerConfig) GetPort() uint16 {
 
 func (s ServerConfig) GetPipelineDir() string {
 	return s.pipelineDir
+}
+
+func createDefaultServerConfig(path string) error {
+	data := []byte("{\n" +
+		"\t\"port\": \"8111\"\n" +
+		"}\n")
+	return os.WriteFile(path, data, 0644)
 }
