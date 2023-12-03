@@ -2,10 +2,11 @@ package executrix
 
 import (
 	"errors"
-	"executrix/data"
-	"executrix/pipeline"
 	"log/slog"
 	"os/exec"
+
+	"executrix/data"
+	"executrix/pipeline"
 )
 
 type Execution struct {

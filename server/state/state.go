@@ -2,12 +2,14 @@ package state
 
 import (
 	"errors"
+	"log/slog"
+	"slices"
+
 	"executrix/data"
 	"executrix/executrix"
 	"executrix/helper"
 	"executrix/pipeline"
-	"log/slog"
-	"slices"
+	"executrix/server/config"
 )
 
 type IPipelineContainer interface {
@@ -28,10 +30,10 @@ type ServerState struct {
 	execution *executrix.Execution
 }
 
-func NewServerState(pipelineDir string) (ServerState, error) {
+func NewServerState(pipelineDir string, cfg config.GlobalConfig) (ServerState, error) {
 	state := ServerState{}
 
-	if err := state.reloadPipelines(pipelineDir); err != nil {
+	if err := state.reloadPipelines(pipelineDir, cfg); err != nil {
 		slog.Error("Error while reloading pipeline configs", "err", err)
 		return ServerState{}, errors.New("error loading pipeline configs")
 	}
@@ -85,7 +87,7 @@ func (s *ServerState) Execute() {
 	s.execution.SetFinished()
 }
 
-func (s *ServerState) reloadPipelines(pipelineDir string) error {
+func (s *ServerState) reloadPipelines(pipelineDir string, cfg config.GlobalConfig) error {
 	s.Pipelines = nil
 	slog.Debug("Cleared piplines before reloading")
 
@@ -95,7 +97,7 @@ func (s *ServerState) reloadPipelines(pipelineDir string) error {
 	}
 
 	for _, file := range result {
-		pipeline, err := pipeline.FromJson(file)
+		pipeline, err := pipeline.PipelineFromJson(file, cfg)
 		if err != nil {
 			slog.Error("Error reading pipline configuration", "file", file, "error", err)
 			// todo - put info to html?

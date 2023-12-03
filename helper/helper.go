@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -82,6 +83,16 @@ func ReadFile(path string) ([]byte, error) {
 }
 
 func CleanUpString(s string) string {
-	strings.ReplaceAll(s, `'`, `"`)
-	return strings.ReplaceAll(s, `\`, `\\`)
+	result := s
+	result = strings.ReplaceAll(result, `'`, `"`)
+	result = strings.ReplaceAll(result, `\`, `\\`)
+	return result
+}
+
+func ReplaceAll(s string, m map[string]string) string {
+	result := s
+	for key := range m {
+		result = strings.ReplaceAll(result, fmt.Sprintf("$(%s)", key), m[key])
+	}
+	return result
 }

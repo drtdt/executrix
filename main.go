@@ -34,7 +34,7 @@ func main() {
 	}
 	slog.Info("Found pipeline directory", "path", pipelineDir)
 
-	config, err := config.FromJson(configDir)
+	config, err := config.ServerConfigFromJson(configDir)
 	if err != nil {
 		slog.Error("Error while reading server config", "error", err)
 		os.Exit(-1)

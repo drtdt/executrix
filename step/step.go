@@ -3,6 +3,8 @@ package step
 import (
 	"errors"
 	"log/slog"
+
+	"executrix/server/config"
 )
 
 type State int
@@ -22,7 +24,7 @@ type IStep interface {
 	Execute(out *string)
 }
 
-func FromJSON(s map[string]interface{}) (IStep, error) {
+func StepFromJSON(s map[string]interface{}, cfg config.GlobalConfig) (IStep, error) {
 	val, ok := s["Type"].(string)
 	if !ok {
 		return nil, errors.New("could not find step type")
@@ -31,7 +33,7 @@ func FromJSON(s map[string]interface{}) (IStep, error) {
 	slog.Info("Read step type", "type", val)
 	switch val {
 	case "PS":
-		return ReadPSType(s)
+		return ReadPSType(s, cfg)
 	default:
 		slog.Error("Unknown step type", "type", val)
 		return nil, errors.New("unknown step type")

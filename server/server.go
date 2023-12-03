@@ -4,22 +4,34 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"text/template"
 
+	"executrix/constants"
 	"executrix/server/config"
 	"executrix/server/routes"
 	"executrix/server/state"
 )
 
 type Server struct {
-	config       config.ServerConfig
+	serverConfig config.ServerConfig
+	globalConfig config.GlobalConfig
 	state        state.ServerState
 	indexPage    template.Template
 	pipelinePage template.Template
 }
 
-func NewServer(config config.ServerConfig) (Server, error) {
+func NewServer(serverConfig config.ServerConfig) (Server, error) {
+	// loading global configuration
+	globalConfig, err := config.GlobalConfigFromJson(filepath.Join(serverConfig.GetConfigDir(), constants.GLOBAL_CONFIG_FILE))
+	if err != nil {
+		slog.Error("Failed to load gobal config", "error", err)
+		return Server{}, err
+	}
 
+	slog.Info("Sucessfully read global config")
+
+	// loading html templates
 	indexTemplate, err := template.ParseFiles("html/index.html")
 	if err != nil {
 		slog.Error("Failed to parse index.html", "error", err)
@@ -32,14 +44,16 @@ func NewServer(config config.ServerConfig) (Server, error) {
 		return Server{}, err
 	}
 
-	state, err := state.NewServerState(config.GetPipelineDir())
+	// creating struct for tracking the state of the server
+	state, err := state.NewServerState(serverConfig.GetPipelineDir(), globalConfig)
 	if err != nil {
 		slog.Error("Failed to read pipeline configs", "error", err)
 		return Server{}, err
 	}
 
 	return Server{
-		config:       config,
+		serverConfig: serverConfig,
+		globalConfig: globalConfig,
 		state:        state,
 		indexPage:    *indexTemplate,
 		pipelinePage: *pipelineTemplate,
@@ -61,8 +75,8 @@ func (s *Server) Serve() error {
 	mux.Handle("/status/", statusHandler)
 	mux.Handle("/output/", outputHandler)
 
-	slog.Info("Start listening", "port", s.config.GetPort())
-	if err := http.ListenAndServe(fmt.Sprintf("localhost:%d", s.config.GetPort()), mux); err != nil {
+	slog.Info("Start listening", "port", s.serverConfig.GetPort())
+	if err := http.ListenAndServe(fmt.Sprintf("localhost:%d", s.serverConfig.GetPort()), mux); err != nil {
 		slog.Error("Failed to start server", "error", err)
 		return err
 	}

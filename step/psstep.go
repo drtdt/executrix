@@ -3,10 +3,12 @@ package step
 import (
 	"bufio"
 	"errors"
-	"executrix/helper"
 	"log/slog"
 	"os/exec"
 	"sync"
+
+	"executrix/helper"
+	"executrix/server/config"
 )
 
 type PSStep struct {
@@ -91,7 +93,7 @@ func (step *PSStep) Execute(out *string) {
 	step.SetState(Success)
 }
 
-func ReadPSType(s map[string]interface{}) (*PSStep, error) {
+func ReadPSType(s map[string]interface{}, cfg config.GlobalConfig) (*PSStep, error) {
 	step := PSStep{}
 
 	if val, ok := s["Name"].(string); !ok {
@@ -104,7 +106,7 @@ func ReadPSType(s map[string]interface{}) (*PSStep, error) {
 	if val, ok := s["ScriptPath"].(string); !ok {
 		return nil, errors.New("could not find script path")
 	} else {
-		step.ScriptPath = val
+		step.ScriptPath = helper.ReplaceAll(val, cfg.GetVars())
 		slog.Info("Read script path", "path", step.ScriptPath)
 	}
 
@@ -112,7 +114,7 @@ func ReadPSType(s map[string]interface{}) (*PSStep, error) {
 		return nil, errors.New("could not find script args")
 	} else {
 		for _, v := range val {
-			step.Args = append(step.Args, v.(string))
+			step.Args = append(step.Args, helper.ReplaceAll(v.(string), cfg.GetVars()))
 		}
 		slog.Info("Read script args", "args", step.Args)
 	}

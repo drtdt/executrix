@@ -18,7 +18,7 @@ type ServerConfig struct {
 	port        uint16
 }
 
-func FromJson(configDir string) (ServerConfig, error) {
+func ServerConfigFromJson(configDir string) (ServerConfig, error) {
 	serverConfigPath := filepath.Join(configDir, constants.SERVER_CONFIG_FILE)
 	pipelineDir := filepath.Join(configDir, constants.PIPELINE_DIR_NAME)
 
@@ -47,7 +47,7 @@ func FromJson(configDir string) (ServerConfig, error) {
 		return ServerConfig{}, err
 	}
 
-	slog.Info("Successfully unmarshalled file content", "content", p)
+	slog.Debug("Successfully unmarshalled file content", "content", p)
 
 	var config ServerConfig
 	config.configDir = configDir
@@ -74,11 +74,16 @@ func (s ServerConfig) GetPort() uint16 {
 	return s.port
 }
 
+func (s ServerConfig) GetConfigDir() string {
+	return s.configDir
+}
+
 func (s ServerConfig) GetPipelineDir() string {
 	return s.pipelineDir
 }
 
 func createDefaultServerConfig(path string) error {
+	// todo: use marshalling
 	data := []byte("{\n" +
 		"\t\"port\": \"8111\"\n" +
 		"}\n")

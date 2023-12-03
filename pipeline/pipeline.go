@@ -3,10 +3,12 @@ package pipeline
 import (
 	"encoding/json"
 	"errors"
-	"executrix/helper"
-	"executrix/step"
 	"log/slog"
 	"slices"
+
+	"executrix/helper"
+	"executrix/server/config"
+	"executrix/step"
 )
 
 type Pipeline struct {
@@ -40,7 +42,7 @@ func (p Pipeline) GetStepStates() []StateInfo {
 	return list
 }
 
-func FromJson(path string) (Pipeline, error) {
+func PipelineFromJson(path string, cfg config.GlobalConfig) (Pipeline, error) {
 	bytes, err := helper.ReadFile(path)
 	if err != nil {
 		return Pipeline{}, err
@@ -70,25 +72,26 @@ func FromJson(path string) (Pipeline, error) {
 		pipeline.Description = val
 	}
 
-	if val, ok := p["Steps"].([]interface{}); !ok {
+	val, ok := p["Steps"].([]interface{})
+	if !ok {
 		return Pipeline{}, errors.New("error reading pipeline steps")
-	} else {
-		slog.Debug("Read pipeline steps", "steps", val)
-		for _, elem := range val {
-			slog.Debug("Read pipeline steps", "steps", elem)
+	}
 
-			val, ok := elem.(map[string]interface{})
-			if !ok {
-				return Pipeline{}, errors.New("unexpected type for step")
-			}
+	slog.Debug("Read pipeline steps", "steps", val)
+	for _, elem := range val {
+		slog.Debug("Read pipeline step", "step", elem)
 
-			step, err := step.FromJSON(val)
-			if err != nil {
-				return Pipeline{}, err
-			}
-
-			pipeline.Steps = append(pipeline.Steps, step)
+		val, ok := elem.(map[string]interface{})
+		if !ok {
+			return Pipeline{}, errors.New("unexpected type for step")
 		}
+
+		step, err := step.StepFromJSON(val, cfg)
+		if err != nil {
+			return Pipeline{}, err
+		}
+
+		pipeline.Steps = append(pipeline.Steps, step)
 	}
 
 	return pipeline, nil
