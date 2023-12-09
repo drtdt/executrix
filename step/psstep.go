@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"os/exec"
+	"strings"
 	"sync"
 
 	"executrix/helper"
@@ -35,15 +36,19 @@ func (step *PSStep) Execute(out *string) {
 	step.SetState(Running)
 
 	slog.Info("Excuting PS step", "step", step.Name, "script", step.ScriptPath)
+	helper.AppendLine(out, "Excuting PS step: "+step.Name)
 
 	args := []string{"-nologo", "-noprofile", "-noninteractive", step.ScriptPath}
 	args = append(args, step.Args...)
+	helper.AppendLine(out, "Excution: powershell "+strings.Join(args, " "))
+	helper.AppendLine(out, "")
 
 	cmd := exec.Command("powershell", args...)
 
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		slog.Error("Error getting stdout pipe in PS step", "error", err)
+		helper.AppendLine(out, "Error getting stdout pipe in PS step: "+err.Error())
 		step.SetState(Failed)
 		return
 	}
@@ -51,6 +56,7 @@ func (step *PSStep) Execute(out *string) {
 	errPipe, err := cmd.StderrPipe()
 	if err != nil {
 		slog.Error("Error getting stderr pipe in PS step", "error", err)
+		helper.AppendLine(out, "Error getting stderr pipe in PS step: "+err.Error())
 		step.SetState(Failed)
 		return
 	}
@@ -60,6 +66,7 @@ func (step *PSStep) Execute(out *string) {
 
 	if err := cmd.Start(); err != nil {
 		slog.Error("Error starting PS step", "error", err)
+		helper.AppendLine(out, "Error starting PS step: "+err.Error())
 		step.SetState(Failed)
 		return
 	}
@@ -67,7 +74,7 @@ func (step *PSStep) Execute(out *string) {
 	go func() {
 		scanner := bufio.NewScanner(outPipe)
 		for scanner.Scan() {
-			*out += helper.CleanUpString(scanner.Text()) + "\\n"
+			helper.AppendLine(out, helper.CleanUpString(scanner.Text()))
 		}
 		waitgroup.Done()
 	}()
@@ -75,13 +82,14 @@ func (step *PSStep) Execute(out *string) {
 	go func() {
 		scanner := bufio.NewScanner(errPipe)
 		for scanner.Scan() {
-			*out += helper.CleanUpString(scanner.Text()) + "\\n"
+			helper.AppendLine(out, helper.CleanUpString(scanner.Text()))
 		}
 		waitgroup.Done()
 	}()
 
 	if err := cmd.Wait(); err != nil {
 		slog.Error("Error waiting for PS step", "error", err)
+		helper.AppendLine(out, "Error waiting for PS step: "+err.Error())
 		step.SetState(Failed)
 		return
 	}
@@ -89,6 +97,9 @@ func (step *PSStep) Execute(out *string) {
 	waitgroup.Wait()
 
 	slog.Info("Finished executing PS step", "step", step.Name)
+	helper.AppendLine(out, "")
+	helper.AppendLine(out, "")
+	helper.AppendLine(out, "Successfully finished PS step: "+step.Name)
 
 	step.SetState(Success)
 }

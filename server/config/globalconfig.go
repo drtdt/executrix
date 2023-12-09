@@ -10,7 +10,8 @@ import (
 )
 
 type GlobalConfig struct {
-	vars map[string]string
+	vars      map[string]string
+	outputDir string
 }
 
 func (cfg GlobalConfig) ResolveVar(name string) (string, error) {
@@ -23,6 +24,10 @@ func (cfg GlobalConfig) ResolveVar(name string) (string, error) {
 
 func (cfg GlobalConfig) GetVars() map[string]string {
 	return cfg.vars
+}
+
+func (cfg GlobalConfig) GetOutputDir() string {
+	return cfg.outputDir
 }
 
 func GlobalConfigFromJson(path string) (GlobalConfig, error) {
@@ -53,14 +58,24 @@ func GlobalConfigFromJson(path string) (GlobalConfig, error) {
 
 	slog.Debug("Successfully unmarshalled file content", "content", p)
 
-	val, ok := p["vars"].([]interface{})
+	cfg := GlobalConfig{}
+
+	val, ok := p["outputDir"].(string)
+	if !ok {
+		return GlobalConfig{}, errors.New("unexpected type for outputDir")
+	}
+
+	slog.Info("Read output dir", "dir", val)
+	cfg.outputDir = val
+
+	list, ok := p["vars"].([]interface{})
 	if !ok {
 		return GlobalConfig{}, errors.New("error reading global vars")
 	}
 
-	slog.Info("Read global vars", "vars", val)
+	slog.Debug("Read global vars", "vars", list)
 	vars := map[string]string{}
-	for _, elem := range val {
+	for _, elem := range list {
 		slog.Info("Read global var", "var", elem)
 
 		pair, ok := elem.(map[string]interface{})
@@ -86,9 +101,9 @@ func GlobalConfigFromJson(path string) (GlobalConfig, error) {
 		vars[name] = value
 	}
 
-	return GlobalConfig{
-		vars: vars,
-	}, nil
+	cfg.vars = vars
+
+	return cfg, nil
 }
 
 func createDefaultGlobalConfig(path string) error {

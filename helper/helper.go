@@ -96,3 +96,7 @@ func ReplaceAll(s string, m map[string]string) string {
 	}
 	return result
 }
+
+func AppendLine(s *string, line string) {
+	*s += line + "\\n"
+}
