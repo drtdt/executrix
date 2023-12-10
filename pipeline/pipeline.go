@@ -42,6 +42,12 @@ func (p Pipeline) GetStepStates() []StateInfo {
 	return list
 }
 
+func (p *Pipeline) Reset() {
+	for _, s := range p.Steps {
+		s.SetState(step.Waiting)
+	}
+}
+
 func PipelineFromJson(path string, cfg config.GlobalConfig) (Pipeline, error) {
 	bytes, err := helper.ReadFile(path)
 	if err != nil {

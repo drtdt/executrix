@@ -112,35 +112,67 @@
                 case 3: return "success"
                 case 4: return "semi"
             }
+        }        
+
+        async function getStatus() {
+            const url = "/status/{{.Name}}"
+            let response = await fetch(url)
+            return await response.json()
         }
 
-        function checkStatus() {
+        function setStepStates(states) {
+            states.forEach(state => {
+                document.getElementById("step_" + state.Step).classList = convertStateId(state.State)
+            })
+        }
+
+        async function checkStatus() {
             console.log("checking...")
 
-            const url = "/status/{{.Name}}"
-            const check = () => {
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        data.stepStates.forEach(state => {
-                            document.getElementById("step_" + state.Step).classList = convertStateId(state.State)
-                        })
+            getStatus().then(data => {
+                setStepStates(data.stepStates)
 
-                        if (data.running) {
-                            setTimeout(checkStatus, 2500)
-                        } else {
-                            document.getElementById("run").disabled = true
-                            document.getElementById("stop").disabled = true
-                            document.getElementById("new").disabled = false
-                        }
-                    })
-            }
-
-            check()
+                if (data.running) {
+                    setTimeout(checkStatus, 2500)
+                } else {
+                    document.getElementById("run").disabled = true
+                    document.getElementById("stop").disabled = true
+                    document.getElementById("new").disabled = false
+                }
+            })
         }
 
         function kill() {} // todo
-        function reset() {} // todo
+        
+        function reset() {
+            console.log("resetting...")
+
+            const url = "/new/{{.Name}}"
+            const new_run = () => {
+                fetch(url, {
+                    method: 'POST',
+                })
+                .then(response => response.json())
+                .then(async data => {
+                    if (data.success) {
+                        console.log("Pipeline reset")
+
+                        enableAllCheckboxes()
+
+                        let data = await getStatus()
+                        setStepStates(data.stepStates)
+                    } else {
+                        console.log("Resetting pipeline failed!")
+                    }
+                })
+            }
+
+            new_run()
+            
+            document.getElementById("run").disabled = false
+            document.getElementById("stop").disabled = true
+            document.getElementById("new").disabled = true
+        }
 
         function run() {
             console.log("running...")
@@ -213,6 +245,11 @@
         function disableAllCheckboxes() {
             document.querySelectorAll("[id^=active]").forEach(box => { box.disabled = true });
             document.querySelectorAll("[id^=single]").forEach(box => { box.disabled = true });
+        }
+
+        function enableAllCheckboxes() {
+            document.querySelectorAll("[id^=active]").forEach(box => { box.disabled = false });
+            //document.querySelectorAll("[id^=single]").forEach(box => { box.disabled = true });
         }
 
         function update() {

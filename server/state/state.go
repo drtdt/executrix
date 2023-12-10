@@ -23,6 +23,7 @@ type IServerState interface {
 	StepOutput(name string) (string, error)
 	NewExecution(p *pipeline.Pipeline, stepInfo []data.StepInfo) error
 	Execute()
+	Reset(pipeline string) bool
 }
 
 type ServerState struct {
@@ -59,7 +60,7 @@ func (s *ServerState) HasExecution() bool {
 
 func (s *ServerState) StepOutput(step string) (string, error) {
 	if !s.HasExecution() {
-		return "", errors.New("no perforing or performed execution")
+		return "", errors.New("no performing or performed execution")
 	}
 
 	return s.execution.StepOutput(step)
@@ -78,13 +79,31 @@ func (s *ServerState) NewExecution(p *pipeline.Pipeline, stepInfo []data.StepInf
 
 func (s *ServerState) Execute() {
 	if s.execution == nil {
-		slog.Warn("Trying to call ServerStore::Execute when ServerStore::Execution is nil")
+		slog.Warn("Trying to call ServerStore::Execute when ServerStore::execution is nil! Ignoring...")
 		return
 	}
 
 	s.execution.Execute()
 
 	s.execution.SetFinished()
+}
+
+func (s *ServerState) Reset(pipeline string) bool {
+	if s.IsRunning() {
+		slog.Warn("Trying to call ServerStore::Reset while execution in progress! Ignoring...")
+		return false
+	}
+
+	p := s.PipelineFromName(pipeline)
+	if p == nil {
+		slog.Error("Pipeline not found", "pipeline", pipeline)
+		return false
+	}
+
+	p.Reset()
+	s.execution = nil
+
+	return true
 }
 
 func (s *ServerState) reloadPipelines(pipelineDir string, cfg config.GlobalConfig) error {
