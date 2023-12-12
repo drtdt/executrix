@@ -1,11 +1,13 @@
 package routes
 
 import (
-	server "executrix/server/state"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
+
+	"executrix/helper"
+	server "executrix/server/state"
 )
 
 type OutputHandler struct {
@@ -33,5 +35,5 @@ func (h OutputHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Debug("Sending output", "step", name, "text", output)
-	fmt.Fprint(w, `{"text": "`+output+`"}`)
+	fmt.Fprint(w, `{"text": "`+helper.ForJSON(output)+`"}`)
 }

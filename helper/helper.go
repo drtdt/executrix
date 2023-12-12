@@ -89,6 +89,12 @@ func CleanUpString(s string) string {
 	return result
 }
 
+func ForJSON(s string) string {
+	result := s
+	result = strings.ReplaceAll(result, `"`, `\"`)
+	return result
+}
+
 func ReplaceAll(s string, m map[string]string) string {
 	result := s
 	for key := range m {
