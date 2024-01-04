@@ -74,7 +74,6 @@
             color: lightskyblue;
             background-color: black;
         }
-
     </style>
 </head>
 <body>
@@ -95,7 +94,7 @@
             <tr>
                 <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()"></td>
                 <td class="min"><input type="checkbox" id="single_{{.Name}}" name="single_{{.Name}}" onclick="update()" disabled></td>
-                <td class="" id="step_{{.Name}}" onclick="selectStep(this.id)">{{.Name}}</td>
+                <td class="" id="step_{{.Name}}" onclick="selectStep(this.id, false)">{{.Name}}</td>
             <tr>
             {{end}}
         </table>
@@ -127,11 +126,20 @@
             })
         }
 
+        function findRunningStep(states) {
+            return states.find(state => state.State === 1)
+        }
+
         async function checkStatus() {
             console.log("checking...")
 
             getStatus().then(data => {
                 setStepStates(data.stepStates)
+                
+                var step = findRunningStep(data.stepStates)
+                if (step) {
+                    selectStep(step.Step, true)
+                }                    
 
                 if (data.running) {
                     setTimeout(checkStatus, 2500)
@@ -214,7 +222,7 @@
             start()
         }
 
-        function selectStep(clicked_id) {
+        function selectStep(clicked_id, scrollDown) {
             console.log("Clicked on", clicked_id)
 
             const url = "/output/" + clicked_id.replace('step_', '')
@@ -225,6 +233,7 @@
                     .then(response => response.json())
                     .then(data => {
                         pane.value = data.text
+                        pane.scrollTop = scrollDown ? pane.scrollHeight : 0
                     })
             }
 
@@ -260,7 +269,11 @@
             document.getElementById("new").disabled = true
         }
 
-        update();
+        function init() {
+            update();
+        }
+
+        init();
     </script>
 </body>
 </html>
