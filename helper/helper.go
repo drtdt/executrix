@@ -92,6 +92,7 @@ func CleanUpString(s string) string {
 func ForJSON(s string) string {
 	result := s
 	result = strings.ReplaceAll(result, `"`, `\"`)
+	result = strings.ReplaceAll(result, "\t", "    ")
 	return result
 }
 
