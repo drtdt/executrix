@@ -80,7 +80,7 @@
     <div class="split left">
         <p><a href="/">Back</a></p>
         <h1>Pipeline {{.Name}}</h1>
-        <input type="submit" value="RUN" id="run" onclick="run()">
+        <input type="submit" value="RUN" id="run" onclick="runChecked()">
         <input type="submit" value="STOP" id="stop" onclick="kill()">
         <input type="submit" value="NEW" id="new" onclick="reset()">
     
@@ -93,7 +93,7 @@
             {{range .Steps}}
             <tr>
                 <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()"></td>
-                <td class="min"><input type="checkbox" id="single_{{.Name}}" name="single_{{.Name}}" onclick="update()" disabled></td>
+                <td class="min"><input type="button" id="single_{{.Name}}" name="single_{{.Name}}" value="&#x25B6;" onclick="runSingle(this.id)"></td>
                 <td class="" id="step_{{.Name}}" onclick="selectStep(this.id, false)">{{.Name}}</td>
             <tr>
             {{end}}
@@ -121,6 +121,7 @@
         }
 
         function setStepStates(states) {
+            console.log("Updating step states")
             states.forEach(state => {
                 document.getElementById("step_" + state.Step).classList = convertStateId(state.State)
             })
@@ -130,20 +131,25 @@
             return states.find(state => state.State === 1)
         }
 
+        function findLastAcitve(states) {
+            return states.findLast(state => state.State > 1)
+        }
+
         async function checkStatus() {
             console.log("checking...")
 
             getStatus().then(data => {
                 setStepStates(data.stepStates)
                 
-                var step = findRunningStep(data.stepStates)
+                let step = findRunningStep(data.stepStates)
                 if (step) {
                     selectStep(step.Step, true)
-                }                    
+                }            
 
                 if (data.running) {
                     setTimeout(checkStatus, 2500)
                 } else {
+                    selectStep(findLastAcitve(data.stepStates), true)  // make sure we get the last output from backend
                     document.getElementById("run").disabled = true
                     document.getElementById("stop").disabled = true
                     document.getElementById("new").disabled = false
@@ -181,16 +187,16 @@
             document.getElementById("run").disabled = false
             document.getElementById("stop").disabled = true
             document.getElementById("new").disabled = true
+            document.getElementById("outPane").value = ""
         }
 
-        function run() {
+        function run(steps) {
             console.log("running...")
 
             const url = "/trigger/{{.Name}}"
-            const checkboxes = document.querySelectorAll("[id^=active]")
-            const body = Array.from(checkboxes).map(elem => ({
-                    StepName: elem.id.replace('active_', ''),
-                    Checked: elem.checked
+            const body = steps.map(step => ({
+                    StepName: step.name,
+                    Checked: step.run,
                 }))
 
             const start = () => {
@@ -222,10 +228,38 @@
             start()
         }
 
-        function selectStep(clicked_id, scrollDown) {
-            console.log("Clicked on", clicked_id)
+        function runChecked() {
+            const checkboxes = document.querySelectorAll("[id^=active]")
+            const steps = Array.from(checkboxes).map(elem => ({
+                name: elem.id.replace('active_', ''),
+                run: elem.checked,
+            }))
 
-            const url = "/output/" + clicked_id.replace('step_', '')
+            run(steps)
+        }
+
+        function runSingle(step) {
+            const stepName = step.replace('single_', '')
+
+            // TODO do we really need a complete list here?
+            const checkboxes = document.querySelectorAll("[id^=active]")
+            const steps = Array.from(checkboxes).map(elem => {
+                const name = elem.id.replace('active_', '')
+                return {
+                    name: name,
+                    run: name === stepName,
+                }
+            })
+
+            run(steps)
+        }
+
+        function selectStep(clicked_id, scrollDown) {
+            const active = clicked_id.replace('step_', '')
+
+            console.log("Updating step output for", active)
+
+            const url = "/output/" + active
             const pane = document.getElementById("outPane")
 
             const retrieve = () => {
@@ -259,7 +293,7 @@
 
         function enableAllCheckboxes() {
             document.querySelectorAll("[id^=active]").forEach(box => { box.disabled = false });
-            //document.querySelectorAll("[id^=single]").forEach(box => { box.disabled = true });
+            document.querySelectorAll("[id^=single]").forEach(box => { box.disabled = false });
         }
 
         function update() {
