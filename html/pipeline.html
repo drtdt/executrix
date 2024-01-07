@@ -149,7 +149,7 @@
                 if (data.running) {
                     setTimeout(checkStatus, 2500)
                 } else {
-                    selectStep(findLastAcitve(data.stepStates), true)  // make sure we get the last output from backend
+                    selectStep(findLastAcitve(data.stepStates).Step, true)  // make sure we get the last output from backend
                     document.getElementById("run").disabled = true
                     document.getElementById("stop").disabled = true
                     document.getElementById("new").disabled = false
@@ -157,7 +157,33 @@
             })
         }
 
-        function kill() {} // todo
+        function kill() {
+            console.log("killing...")
+
+            const url = "/kill/{{.Name}}"
+            const request_kill = () => {
+                fetch(url, {
+                    method: 'POST',
+                })
+                .then(response => response.json())
+                .then(async data => {
+                    if (data.success) {
+                        console.log("Killing successful")
+                        return true
+                    } else {
+                        console.log("Problems occurred during killing pipeline!")
+                        return false
+                    }
+                })
+            }
+
+            let result = request_kill()
+            
+            document.getElementById("run").disabled = true
+            document.getElementById("stop").disabled = true
+            document.getElementById("new").disabled = result
+            document.getElementById("outPane").value = ""
+        }
         
         function reset() {
             console.log("resetting...")

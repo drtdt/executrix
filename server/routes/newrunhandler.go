@@ -25,13 +25,11 @@ func (h NewRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	name := strings.TrimPrefix(r.URL.Path, "/new/")
-	h.state.Reset(name)
-	pipeline := h.state.PipelineFromName(name)
-	if pipeline == nil {
-		slog.Error("Could not find pipeline", "name", name)
-		fmt.Fprint(w, `{"success": false}`) // todo error handling
-		return
-	}
 
-	fmt.Fprint(w, `{"success": true}`)
+	if err := h.state.Reset(name); err != nil {
+		slog.Error("Could not reset pipeline", "error", err)
+		fmt.Fprint(w, `{"success": false}`) // todo error handling
+	} else {
+		fmt.Fprint(w, `{"success": true}`)
+	}
 }

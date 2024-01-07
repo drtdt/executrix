@@ -22,6 +22,7 @@ type IStep interface {
 	GetState() State
 	SetState(b State)
 	Execute(out *string)
+	Kill() error
 }
 
 func StepFromJSON(s map[string]interface{}, cfg config.GlobalConfig) (IStep, error) {

@@ -69,6 +69,7 @@ func (s *Server) Serve() error {
 	statusHandler := routes.NewStatusHandler(&s.state)
 	outputHandler := routes.NewOutputHandler(&s.state)
 	newRunHandler := routes.NewNewRunHandler(&s.state)
+	newKillHandler := routes.NewKillHandler(&s.state)
 
 	mux.Handle("/", indexHandler)
 	mux.Handle("/pipeline/", pipelineHandler)
@@ -76,6 +77,7 @@ func (s *Server) Serve() error {
 	mux.Handle("/status/", statusHandler)
 	mux.Handle("/output/", outputHandler)
 	mux.Handle("/new/", newRunHandler)
+	mux.Handle("/kill/", newKillHandler)
 
 	slog.Info("Start listening", "port", s.serverConfig.GetPort())
 	if err := http.ListenAndServe(fmt.Sprintf("localhost:%d", s.serverConfig.GetPort()), mux); err != nil {

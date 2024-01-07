@@ -23,7 +23,8 @@ type IServerState interface {
 	StepOutput(name string) (string, error)
 	NewExecution(p *pipeline.Pipeline, stepInfo []data.StepInfo) error
 	Execute()
-	Reset(pipeline string) bool
+	Reset(pipeline string) error
+	Kill(pipelin string) error
 }
 
 type ServerState struct {
@@ -88,22 +89,29 @@ func (s *ServerState) Execute() {
 	s.execution.SetFinished()
 }
 
-func (s *ServerState) Reset(pipeline string) bool {
+func (s *ServerState) Kill(pipeline string) error {
+	if !s.IsRunning() || !s.HasExecution() {
+		slog.Warn("Trying to cancel without running execution")
+		return nil
+	}
+
+	return s.execution.Kill()
+}
+
+func (s *ServerState) Reset(pipeline string) error {
 	if s.IsRunning() {
-		slog.Warn("Trying to call ServerStore::Reset while execution in progress! Ignoring...")
-		return false
+		return errors.New("Trying to call ServerStore::Reset while execution in progress! Ignoring...")
 	}
 
 	p := s.PipelineFromName(pipeline)
 	if p == nil {
-		slog.Error("Pipeline not found", "pipeline", pipeline)
-		return false
+		return errors.New("Pipeline not found")
 	}
 
 	p.Reset()
 	s.execution = nil
 
-	return true
+	return nil
 }
 
 func (s *ServerState) reloadPipelines(pipelineDir string, cfg config.GlobalConfig) error {

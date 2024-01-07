@@ -15,6 +15,7 @@ type Execution struct {
 	outputs    map[string]*string
 	currentCmd *exec.Cmd
 	finished   bool
+	aborted    bool
 }
 
 func NewExecution(p *pipeline.Pipeline, stepInfo []data.StepInfo) (*Execution, error) {
@@ -28,6 +29,7 @@ func NewExecution(p *pipeline.Pipeline, stepInfo []data.StepInfo) (*Execution, e
 		outputs:    make(map[string]*string),
 		currentCmd: nil,
 		finished:   false,
+		aborted:    false,
 	}, nil
 }
 
@@ -52,10 +54,28 @@ func (e Execution) StepOutput(step string) (string, error) {
 	return *output, nil
 }
 
+func (e *Execution) Kill() error {
+	slog.Info("Killing pipeline")
+	e.aborted = true
+
+	for _, step := range e.pipeline.Steps {
+		if err := step.Kill(); err != nil {
+			slog.Error("Error trying to kill step", "step", step.ShowAs(), "error", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (e *Execution) Execute() {
 	slog.Info("Starting pipeline")
 
 	for _, step := range e.stepInfo {
+		if e.aborted {
+			break
+		}
+
 		if !step.Checked {
 			slog.Info("Skipping unchecked step", "step", step.StepName)
 			continue
