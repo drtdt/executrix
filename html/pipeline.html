@@ -92,7 +92,7 @@
             <tr>
             {{range .Steps}}
             <tr>
-                <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()"></td>
+                <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()" data-dependson="{{.DependsOn}}"></td>
                 <td class="min"><input type="button" id="single_{{.Name}}" name="single_{{.Name}}" value="&#x25B6;" onclick="runSingle(this.id)"></td>
                 <td class="" id="step_{{.Name}}" onclick="selectStep(this.id, false)">{{.Name}}</td>
             <tr>
@@ -301,15 +301,7 @@
         }
 
         function anyActive() {
-            let found = false
-            document.querySelectorAll("[id^=active]").forEach(box => {
-                if (box.checked) {
-                    found = true
-                    return
-                }
-            });
-
-            return found
+            return Array.from(document.querySelectorAll("[id^=active]")).some(box => box.checked);
         }
 
         function disableAllCheckboxes() {
@@ -322,8 +314,23 @@
             document.querySelectorAll("[id^=single]").forEach(box => { box.disabled = false });
         }
 
+        function checkDependencies(steps) {
+            steps.forEach(step => {
+                let box = document.getElementById("active_" + step)
+                box.checked = true
+                let dependsOn = box.getAttribute("data-dependson")
+                if (dependsOn.length > 2) {
+                    checkDependencies(dependsOn.slice(1, -1).split(','))
+                }
+            })
+        }
+
         function update() {
             console.log("updating states")
+
+            stepList = Array.from(document.querySelectorAll("[id^=active]")).filter(box => box.checked).map(box => box.id.replace("active_", ""))
+            checkDependencies(stepList)
+
             document.getElementById("run").disabled = !anyActive()
             document.getElementById("stop").disabled = true
             document.getElementById("new").disabled = true

@@ -14,10 +14,10 @@ import (
 
 type PSStep struct {
 	Name       string // todo: this is public so it can be read in html template - should become decoupled
+	DependsOn  []string
 	scriptPath string
 	state      State
 	args       []string
-	dependsOn  []string
 	cmd        *exec.Cmd
 }
 
@@ -162,9 +162,9 @@ func ReadPSType(s map[string]interface{}, cfg config.GlobalConfig) (*PSStep, err
 		return nil, errors.New("could not find script dependencies")
 	} else {
 		for _, v := range val {
-			step.dependsOn = append(step.dependsOn, v.(string))
+			step.DependsOn = append(step.DependsOn, v.(string))
 		}
-		slog.Info("Read script dependencies", "dependencies", step.dependsOn)
+		slog.Info("Read script dependencies", "dependencies", step.DependsOn)
 	}
 
 	step.state = Waiting
