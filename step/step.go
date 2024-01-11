@@ -19,6 +19,7 @@ const (
 
 type IStep interface {
 	ShowAs() string
+	Type() string
 	GetState() State
 	SetState(b State)
 	Execute(out *string)
@@ -35,6 +36,8 @@ func StepFromJSON(s map[string]interface{}, cfg config.GlobalConfig) (IStep, err
 	switch val {
 	case "PS":
 		return ReadPSType(s, cfg)
+	case "Link":
+		return ReadLinkType(s, cfg)
 	default:
 		slog.Error("Unknown step type", "type", val)
 		return nil, errors.New("unknown step type")

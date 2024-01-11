@@ -21,6 +21,10 @@ type PSStep struct {
 	cmd        *exec.Cmd
 }
 
+func (s PSStep) Type() string {
+	return "PS"
+}
+
 func (s *PSStep) ShowAs() string {
 	return s.Name
 }
