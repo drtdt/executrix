@@ -93,7 +93,7 @@
             {{range .Steps}}
             <tr>
                 {{if eq .Type "PS"}}
-                <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()" data-dependson="{{.DependsOn}}"></td>
+                <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()" data-dependson="{{range $index, $element := .DependsOn}}{{if $index}},{{end}}{{$element}}{{end}}"></td>
                 <td class="min"><input type="button" id="single_{{.Name}}" name="single_{{.Name}}" value="&#x25B6;" onclick="runSingle(this.id)"></td>
                 <td class="" id="step_{{.Name}}" onclick="selectStep(this.id, false)">{{.Name}}</td>
                 {{else if eq .Type "Link"}}
@@ -104,6 +104,10 @@
             <tr>
             {{end}}
         </table>
+        <div>
+            <input type="checkbox" id="auto_scroll" name="auto_scroll"><label for="auto_scroll">Auto-Scroll</label>
+            <!--<input type="checkbox" id="select_all" name="select_all" onclick="handleSelectAll()"><label for="select_all">Select All</label>-->
+        </div>
     </div>
     <div class="split right">
         <textarea id="outPane" readonly></textarea>
@@ -144,13 +148,17 @@
         async function checkStatus() {
             console.log("checking...")
 
+            autoScroll = document.getElementById("auto_scroll")
             getStatus().then(data => {
                 setStepStates(data.stepStates)
                 
-                let step = findRunningStep(data.stepStates)
-                if (step) {
-                    selectStep(step.Step, true)
-                }            
+                console.log(autoScroll.checked)
+                if (autoScroll.checked) {
+                    let step = findRunningStep(data.stepStates)
+                    if (step) {
+                        selectStep(step.Step, true)
+                    }
+                }
 
                 if (data.running) {
                     setTimeout(checkStatus, 2500)
@@ -321,12 +329,14 @@
         }
 
         function checkDependencies(steps) {
+            console.log("checking dependencies for", steps)
             steps.forEach(step => {
                 let box = document.getElementById("active_" + step)
                 box.checked = true
-                let dependsOn = box.getAttribute("data-dependson")
+                let dependsOn = box.getAttribute("data-dependson").replace(/\s+/g, "")
+                console.log("found dependency list: ", dependsOn)
                 if (dependsOn.length > 2) {
-                    checkDependencies(dependsOn.slice(1, -1).split(','))
+                    checkDependencies(dependsOn.split(','))
                 }
             })
         }
