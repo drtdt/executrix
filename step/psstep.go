@@ -5,8 +5,10 @@ import (
 	"errors"
 	"log/slog"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"executrix/helper"
 	"executrix/server/config"
@@ -15,6 +17,7 @@ import (
 type PSStep struct {
 	Name       string // todo: this is public so it can be read in html template - should become decoupled
 	DependsOn  []string
+	Default    bool
 	scriptPath string
 	state      State
 	args       []string
@@ -48,6 +51,8 @@ func (s *PSStep) Kill() error {
 
 func (step *PSStep) Execute(out *string) {
 	step.SetState(Running)
+
+	start := time.Now()
 
 	slog.Info("Excuting PS step", "step", step.Name, "script", step.scriptPath)
 	helper.AppendLine(out, "Excuting PS step: "+step.Name)
@@ -131,6 +136,7 @@ func (step *PSStep) Execute(out *string) {
 	helper.AppendLine(out, "")
 	helper.AppendLine(out, "")
 	helper.AppendLine(out, "Successfully finished PS step: "+step.Name)
+	helper.AppendLine(out, "Duration: "+strconv.FormatFloat(time.Since(start).Seconds(), 'f', -1, 64)+"secs")
 
 	step.SetState(Success)
 }
@@ -144,6 +150,13 @@ func ReadPSType(s map[string]interface{}, cfg config.GlobalConfig) (*PSStep, err
 	} else {
 		step.Name = val
 		slog.Info("Read step name", "s", step.Name)
+	}
+
+	if val, ok := s["Default"].(bool); !ok {
+		step.Default = false
+	} else {
+		step.Default = val
+		slog.Info("Read step name", "s", step.Default)
 	}
 
 	if val, ok := s["ScriptPath"].(string); !ok {

@@ -83,6 +83,8 @@
         <input type="submit" value="RUN" id="run" onclick="runChecked()">
         <input type="submit" value="STOP" id="stop" onclick="kill()">
         <input type="submit" value="NEW" id="new" onclick="reset()">
+        <input type="submit" value="CHECK DEFAULT" id="check_default" onclick="checkDefault()">
+        <input type="submit" value="CLEAR SELECTION" id="clear_selection" onclick="clearSelection()">
     
         <table>
             <tr>
@@ -93,9 +95,9 @@
             {{range .Steps}}
             <tr>
                 {{if eq .Type "PS"}}
-                <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()" data-dependson="{{range $index, $element := .DependsOn}}{{if $index}},{{end}}{{$element}}{{end}}"></td>
+                <td class="min"><input type="checkbox" id="active_{{.Name}}" name="active_{{.Name}}" onclick="update()" is-default="{{.Default}}" data-dependson="{{range $index, $element := .DependsOn}}{{if $index}},{{end}}{{$element}}{{end}}"></td>
                 <td class="min"><input type="button" id="single_{{.Name}}" name="single_{{.Name}}" value="&#x25B6;" onclick="runSingle(this.id)"></td>
-                <td class="" id="step_{{.Name}}" onclick="selectStep(this.id, false)">{{.Name}}</td>
+                <td class="" id="step_{{.Name}}" onclick="selectStep(this.id, false)">{{.Name}}</div></td>
                 {{else if eq .Type "Link"}}
                 <td class="min"></td>
                 <td class="min"><input type="button" id="copy_{{.Name}}" name="copy_{{.Name}}" value="&#x1F4CB;" onclick="navigator.clipboard.writeText(`{{.Link}}`)"></td>
@@ -122,7 +124,7 @@
                 case 3: return "success"
                 case 4: return "semi"
             }
-        }        
+        }
 
         async function getStatus() {
             const url = "/status/{{.Name}}"
@@ -167,6 +169,8 @@
                     document.getElementById("run").disabled = true
                     document.getElementById("stop").disabled = true
                     document.getElementById("new").disabled = false
+                    document.getElementById("check_default").disabled = true
+                    document.getElementById("clear_selection").disabled = true
                 }
             })
         }
@@ -196,6 +200,8 @@
             document.getElementById("run").disabled = true
             document.getElementById("stop").disabled = true
             document.getElementById("new").disabled = result
+            document.getElementById("check_default").disabled = true
+            document.getElementById("clear_selection").disabled = true
             document.getElementById("outPane").value = ""
         }
         
@@ -227,6 +233,8 @@
             document.getElementById("run").disabled = false
             document.getElementById("stop").disabled = true
             document.getElementById("new").disabled = true
+            document.getElementById("check_default").disabled = false
+            document.getElementById("clear_selection").disabled = false
             document.getElementById("outPane").value = ""
         }
 
@@ -256,6 +264,8 @@
                         document.getElementById("run").disabled = true
                         document.getElementById("stop").disabled = false
                         document.getElementById("new").disabled = true
+                        document.getElementById("check_default").disabled = true
+                        document.getElementById("clear_selection").disabled = true
                         disableAllCheckboxes()
 
                         checkStatus()
@@ -341,15 +351,37 @@
             })
         }
 
+        function checkDefault() {
+            steps = Array.from(document.querySelectorAll("[id^=active]")).map(box => box.id.replace("active_", ""));
+            steps.forEach(step => {
+                let box = document.getElementById("active_" + step);
+                let isDefault = box.getAttribute("is-default");
+                box.checked = (isDefault === "true") ? true : false;
+            });
+
+            update();
+        }
+
+        function clearSelection() {
+            steps = Array.from(document.querySelectorAll("[id^=active]")).map(box => box.id.replace("active_", ""));
+            steps.forEach(step => {
+                let box = document.getElementById("active_" + step);
+                box.checked = false;
+            });
+
+            update();
+        }
+
         function update() {
             console.log("updating states")
 
-            stepList = Array.from(document.querySelectorAll("[id^=active]")).filter(box => box.checked).map(box => box.id.replace("active_", ""))
-            checkDependencies(stepList)
+            checkDependencies(Array.from(document.querySelectorAll("[id^=active]")).filter(box => box.checked).map(box => box.id.replace("active_", "")))
 
             document.getElementById("run").disabled = !anyActive()
             document.getElementById("stop").disabled = true
             document.getElementById("new").disabled = true
+            document.getElementById("check_default").disabled = false
+            document.getElementById("clear_selection").disabled = false
         }
 
         function init() {

@@ -2,6 +2,8 @@ package helper
 
 import (
 	"os"
+	"sync"
+	"sync/atomic"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -9,6 +11,9 @@ import (
 
 type process struct {
 	Pid    int
+	_      uint8
+	_      atomic.Uint64
+	_      sync.RWMutex
 	Handle uintptr
 }
 
